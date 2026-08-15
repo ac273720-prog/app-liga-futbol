@@ -3,10 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Liga de Fútbol</title>
+    <title>Liga de Fútbol</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
+        h1 { color: #1e3a8a; text-align: center; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba[0,0,0,0.1]; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
+        th { background-color: #1e3a8a; color: white; }
+    </style>
 </head>
 <body>
-    <h1>Mi Liga de Fútbol</h1>
-    <p>¡La app ya está conectada y lista!</p>
+    <div class="container">
+        <h1>Tabla de Posiciones - Liga de Fútbol</h1>
+        <div id="loading">Cargando datos de la liga...</div>
+        <table id="tabla-posiciones" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Equipo</th>
+                    <th>PJ</th>
+                    <th>PG</th>
+                    <th>PE</th>
+                    <th>PP</th>
+                    <th>PTS</th>
+                </tr>
+            </thead>
+            <tbody id="contenido-tabla"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://eejzjwnysffgmgrtmrbb.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_HBBzIBMdJ87_TQU5xMeopA_N7KhuA";
+        const _supabase = supabase.createClient[SUPABASE_URL, SUPABASE_KEY];
+
+        async function cargarDatos[] {
+            const { data, error } = await _supabase.from['posiciones'].select['*'];
+            const loading = document.getElementById['loading'];
+            const tabla = document.getElementById['tabla-posiciones'];
+            const contenido = document.getElementById['contenido-tabla'];
+
+            if [error || !data || data.length === 0] {
+                loading.innerText = "Conectado a Supabase. [Agrega equipos en la base de datos para verlos aquí].";
+                return;
+            }
+
+            loading.style.display = 'none';
+            tabla.style.display = 'table';
+            contenido.innerHTML = data.map[eq => `
+                <tr>
+                    <td><b>${eq.equipo || 'Equipo'}</b></td>
+                    <td>${eq.pj || 0}</td>
+                    <td>${eq.pg || 0}</td>
+                    <td>${eq.pe || 0}</td>
+                    <td>${eq.pp || 0}</td>
+                    <td><b>${eq.pts || 0}</b></td>
+                </tr>
+            `].join[''];
+        }
+
+        cargarDatos[];
+    </script>
 </body>
 </html>
