@@ -8,7 +8,7 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
         h1 { color: #1e3a8a; text-align: center; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba[0,0,0,0.1]; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
         th { background-color: #1e3a8a; color: white; }
@@ -36,34 +36,46 @@
     <script>
         const SUPABASE_URL = "https://eejzjwnysffgmgrtmrbb.supabase.co";
         const SUPABASE_KEY = "sb_publishable_HBBzIBMdJ87_TQU5xMeopA_N7KhuA";
-        const _supabase = supabase.createClient[SUPABASE_URL, SUPABASE_KEY];
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        async function cargarDatos[] {
-            const { data, error } = await _supabase.from['posiciones'].select['*'];
-            const loading = document.getElementById['loading'];
-            const tabla = document.getElementById['tabla-posiciones'];
-            const contenido = document.getElementById['contenido-tabla'];
+        async function cargarDatos() {
+            const loading = document.getElementById('loading');
+            const tabla = document.getElementById('tabla-posiciones');
+            const contenido = document.getElementById('contenido-tabla');
 
-            if [error || !data || data.length === 0] {
-                loading.innerText = "Conectado a Supabase. [Agrega equipos en la base de datos para verlos aquí].";
-                return;
+            try {
+                const { data, error } = await _supabase.from('posiciones').select('*');
+
+                if (error) {
+                    loading.innerText = "Error de conexión con Supabase. Revisa la tabla 'posiciones'.";
+                    console.error(error);
+                    return;
+                }
+
+                if (!data || data.length === 0) {
+                    loading.innerText = "Conexión exitosa. No hay datos ingresados en la tabla 'posiciones'.";
+                    return;
+                }
+
+                loading.style.display = 'none';
+                tabla.style.display = 'table';
+                contenido.innerHTML = data.map(eq => `
+                    <tr>
+                        <td><b>${eq.equipo || 'Equipo'}</b></td>
+                        <td>${eq.pj || 0}</td>
+                        <td>${eq.pg || 0}</td>
+                        <td>${eq.pe || 0}</td>
+                        <td>${eq.pp || 0}</td>
+                        <td><b>${eq.pts || 0}</b></td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                loading.innerText = "Ocurrió un error al cargar la información.";
+                console.error(err);
             }
-
-            loading.style.display = 'none';
-            tabla.style.display = 'table';
-            contenido.innerHTML = data.map[eq => `
-                <tr>
-                    <td><b>${eq.equipo || 'Equipo'}</b></td>
-                    <td>${eq.pj || 0}</td>
-                    <td>${eq.pg || 0}</td>
-                    <td>${eq.pe || 0}</td>
-                    <td>${eq.pp || 0}</td>
-                    <td><b>${eq.pts || 0}</b></td>
-                </tr>
-            `].join[''];
         }
 
-        cargarDatos[];
+        cargarDatos();
     </script>
 </body>
 </html>
