@@ -26,6 +26,17 @@
         <button class="primary" type="submit">Ingresar</button>
       </form>
       <div id="loginMessage" class="message"></div>
+      <details class="setup-details">
+        <summary>Configuración inicial del primer administrador</summary>
+        <form id="bootstrapForm" class="stack" style="margin-top:14px">
+          <label>Nombre<input id="bootstrapName" required autocomplete="name"></label>
+          <label>Correo<input id="bootstrapEmail" type="email" required autocomplete="email"></label>
+          <label>Contraseña<input id="bootstrapPassword" type="password" required minlength="8" autocomplete="new-password"></label>
+          <label>Código de configuración<input id="bootstrapCode" required autocomplete="off"></label>
+          <button class="primary" type="submit">Crear primer administrador</button>
+        </form>
+        <div id="bootstrapMessage" class="message"></div>
+      </details>
     </div>
   </section>
 
