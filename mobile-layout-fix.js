@@ -3,7 +3,7 @@ const $=s=>document.querySelector(s);
 const css=document.createElement('style');
 css.id='mobile-layout-fix-style';
 css.textContent=`
-.mobile-qualification{display:none}
+.mobile-qualification,.mobile-general-list{display:none}
 @media(max-width:700px){
   body{overflow-x:hidden}
   .top{position:relative!important;display:grid!important;grid-template-columns:1fr!important;gap:10px!important;padding:12px!important}
@@ -23,7 +23,6 @@ css.textContent=`
   .filters{display:grid!important;grid-template-columns:1fr!important;width:100%!important;gap:8px!important}
   .filters label,.filters select{min-width:0!important;width:100%!important}
 
-  /* Tabla de serie: POS, EQUIPO, DG, PTS; clasificación debajo del club */
   .mobile-series-table{min-width:0!important;width:100%!important;table-layout:fixed!important}
   .mobile-series-table .mobile-stat-hide,.mobile-series-table .mobile-situation-hide{display:none!important}
   .mobile-series-table th,.mobile-series-table td{padding:9px 5px!important}
@@ -34,19 +33,22 @@ css.textContent=`
   #pubStandings td[data-qualification],#standings td[data-qualification]{display:none!important}
   #pubStandings td:nth-child(2),#standings td:nth-child(2){font-size:.86rem!important;line-height:1.12!important}
   #pubStandings td:nth-child(10),#standings td:nth-child(10){font-size:.96rem!important;font-weight:950!important}
-
   .mobile-qualification{display:inline-flex!important;align-items:center!important;max-width:100%!important;margin-top:5px!important;padding:3px 6px!important;border-left:3px solid var(--accent,#ff1f59)!important;background:#f7f7f4!important;color:#071a22!important;font-size:.62rem!important;font-weight:900!important;line-height:1.08!important;white-space:normal!important;border-radius:2px!important}
 
-  /* Tabla general móvil: POS, EQUIPO y PTS. Estado va debajo del equipo */
+  /* La tabla general normal se oculta en móvil y se reemplaza por una lista compacta que nunca desborda. */
   #pubGeneralCard,#adminGeneralCard{padding:12px!important;margin-top:16px!important;overflow:hidden!important}
-  #pubGeneralCard .table,#adminGeneralCard .table{overflow:hidden!important;width:100%!important}
-  .mobile-general-table{min-width:0!important;width:100%!important;table-layout:fixed!important}
-  .mobile-general-table th,.mobile-general-table td{padding:9px 5px!important;font-size:.76rem!important;white-space:normal!important}
-  .mobile-general-table th:nth-child(1),.mobile-general-table td:nth-child(1){width:36px!important}
-  .mobile-general-table th:nth-child(2),.mobile-general-table td:nth-child(2){width:auto!important;text-align:left!important;padding-left:8px!important}
-  .mobile-general-table th:nth-child(3),.mobile-general-table td:nth-child(3){width:58px!important;text-align:center!important}
-  .mobile-general-table th:nth-child(4),.mobile-general-table td:nth-child(4){display:none!important}
-  .mobile-general-table td:nth-child(3) b{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:44px!important;max-width:52px!important;padding:6px 5px!important;font-size:.95rem!important;line-height:1!important}
+  #pubGeneralCard .table,#adminGeneralCard .table{display:none!important}
+  .mobile-general-list{display:block!important;width:100%!important;max-width:100%!important;overflow:hidden!important;border:1px solid #27424b;background:#08242d}
+  .mobile-general-head,.mobile-general-row{display:grid;grid-template-columns:36px minmax(0,1fr) 52px;align-items:center;width:100%;max-width:100%}
+  .mobile-general-head{background:#0a2934;border-bottom:2px solid #415b64;color:#d8e2e6;font-size:.66rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
+  .mobile-general-head>span,.mobile-general-row>span,.mobile-general-team{padding:9px 6px;min-width:0}
+  .mobile-general-head>span:last-child,.mobile-general-points{text-align:center}
+  .mobile-general-row{border-bottom:1px solid #203a44;color:#eef3f5;min-height:58px}
+  .mobile-general-row:last-child{border-bottom:0}
+  .mobile-general-row.is-first{box-shadow:inset 5px 0 0 var(--accent,#ff1f59)}
+  .mobile-general-pos{font-weight:950;text-align:center}
+  .mobile-general-team{font-weight:850;font-size:.84rem;line-height:1.12;overflow-wrap:anywhere}
+  .mobile-general-points b{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:42px!important;padding:6px 5px!important;background:var(--accent,#ff1f59)!important;color:#fff!important;font-size:.92rem!important;line-height:1!important;border-radius:2px!important}
 
   .classification-summary{padding:12px!important}
   .classification-items{gap:5px!important}
@@ -98,17 +100,31 @@ function fixSeries(body){
   });
 }
 
-function fixGeneral(body){
+function renderGeneralList(body){
   if(!body)return;
-  const table=body.closest('table');
-  if(!table)return;
-  table.classList.add('mobile-general-table');
-  [...body.querySelectorAll('tr')].forEach(row=>addChip(row.children[1],row.querySelector('td[data-qualification]')));
+  const card=body.closest('.card');
+  if(!card)return;
+  let list=card.querySelector('.mobile-general-list');
+  if(!list){
+    list=document.createElement('div');
+    list.className='mobile-general-list';
+    const tableWrap=body.closest('.table');
+    if(tableWrap)tableWrap.after(list); else card.appendChild(list);
+  }
+  const rows=[...body.querySelectorAll('tr')].filter(r=>r.children.length>=3);
+  const html=rows.map((row,i)=>{
+    const pos=(row.children[0]?.textContent||'').trim();
+    const team=(row.children[1]?.childNodes?.[0]?.textContent||row.children[1]?.textContent||'').trim();
+    const pts=(row.children[2]?.textContent||'').trim();
+    const status=shortStatus(row.querySelector('td[data-qualification]')?.textContent);
+    return `<div class="mobile-general-row ${i===0?'is-first':''}"><span class="mobile-general-pos">${pos}</span><div class="mobile-general-team"><div>${team}</div>${status?`<span class="mobile-qualification">${status}</span>`:''}</div><span class="mobile-general-points"><b>${pts}</b></span></div>`;
+  }).join('');
+  list.innerHTML=`<div class="mobile-general-head"><span>POS</span><span>EQUIPO</span><span>PTS</span></div>${html||'<div class="mobile-general-row"><span></span><div class="mobile-general-team">Sin datos disponibles.</div><span></span></div>'}`;
 }
 
 function run(){
   fixSeries($('#pubStandings'));fixSeries($('#standings'));
-  fixGeneral($('#pubGeneral'));fixGeneral($('#adminGeneral'));
+  renderGeneralList($('#pubGeneral'));renderGeneralList($('#adminGeneral'));
 }
 function init(){
   run();
