@@ -1,0 +1,33 @@
+name: Activar diseño móvil optimizado
+on:
+  push:
+    paths:
+      - 'mobile-layout-fix.js'
+      - '.github/workflows/enable-mobile-layout.yml'
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Insertar script móvil
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          tag='<script src="mobile-layout-fix.js?v=1"></script>'
+          if tag not in s:
+              s=s.replace('</body></html>', tag+'</body></html>')
+          p.write_text(s)
+          PY
+      - name: Guardar cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Activar diseño móvil limpio para tablas"
+            git push
+          fi
