@@ -1,0 +1,33 @@
+name: Activar corrección de cancha
+on:
+  push:
+    paths:
+      - 'venue-input-fix.js'
+      - '.github/workflows/enable-venue-fix.yml'
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Insertar script de cancha
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          tag='<script src="venue-input-fix.js?v=1"></script>'
+          if tag not in s:
+              s=s.replace('</body></html>', tag+'</body></html>')
+          p.write_text(s)
+          PY
+      - name: Guardar cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Activar selector y escritura manual de cancha"
+            git push
+          fi
