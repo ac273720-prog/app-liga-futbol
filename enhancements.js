@@ -120,13 +120,15 @@
   }
 
   const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-  function qualificationStatus(pos,total,competitionName){
-    const afacon=norm(S.aName).includes('afacon');
-    if(!afacon){
-      if(pos===1)return '🏆 Copa Regional';
-      if(pos>=2&&pos<=5)return '⚔️ Liguilla';
-      return '—';
-    }
+  const isAfacon=()=>norm(S.aName).includes('afacon');
+
+  function seriesQualificationStatus(pos){
+    if(pos===1)return '🏆 Copa Regional';
+    if(pos>=2&&pos<=5)return '⚔️ Liguilla';
+    return '—';
+  }
+
+  function afaconGeneralStatus(pos,total,competitionName){
     const c=norm(competitionName);
     if(c.includes('liga a')){
       if(pos===1)return '🏆 Copa Regional';
@@ -142,43 +144,107 @@
     }
     return '—';
   }
-  function qualificationNote(competitionName){
-    if(!norm(S.aName).includes('afacon'))return 'Situación provisoria según la tabla general: 1° clasifica a Copa Regional y del 2° al 5° están en zona de liguilla.';
-    const c=norm(competitionName);
-    if(c.includes('liga a'))return 'Afacon Liga A: 1° Copa Regional; 2° y 3° a liguilla regional; los 2 últimos descienden y el antepenúltimo juega repechaje con el 3° de Liga B.';
-    if(c.includes('liga b'))return 'Afacon Liga B: 1° y 2° ascienden y juegan liguilla regional; el 3° juega repechaje por el ascenso contra el antepenúltimo de Liga A.';
-    return '';
+
+  function removeQualification(body){
+    const table=body?.closest('table');
+    table?.querySelectorAll('[data-qualification]').forEach(x=>x.remove());
+    table?.querySelectorAll('tbody tr').forEach(r=>r.querySelectorAll('[data-qualification]').forEach(x=>x.remove()));
   }
+
+  function decorateSeriesTable(body){
+    if(!body)return;
+    if(isAfacon()){
+      removeQualification(body);
+      const note=body.closest('.table')?.parentElement?.querySelector('[data-series-qualification-note]');
+      if(note)note.remove();
+      return;
+    }
+    const table=body.closest('table'),head=table?.querySelector('thead tr');if(!head)return;
+    if(!head.querySelector('[data-qualification]')){
+      const th=document.createElement('th');th.dataset.qualification='1';th.textContent='Situación';head.appendChild(th);
+    }
+    const rows=[...body.querySelectorAll('tr')];
+    rows.forEach(r=>{
+      const cells=r.querySelectorAll('td');if(!cells.length)return;
+      const pos=Number(cells[0].textContent);if(!Number.isFinite(pos))return;
+      let td=r.querySelector('[data-qualification]');if(!td){td=document.createElement('td');td.dataset.qualification='1';r.appendChild(td)}
+      td.innerHTML=`<b>${seriesQualificationStatus(pos)}</b>`;
+    });
+    const wrap=table.closest('.table')?.parentElement;
+    if(wrap&&!wrap.querySelector('[data-series-qualification-note]')){
+      const p=document.createElement('p');p.dataset.seriesQualificationNote='1';p.className='muted';p.textContent='Clasificación provisoria de esta serie: el 1° va a Copa Regional y del 2° al 5° están en zona de liguilla.';
+      table.closest('.table').after(p);
+    }
+  }
+
   function decoratePublicGeneral(){
     const body=document.querySelector('#pubGeneral');if(!body)return;
     const table=body.closest('table'),head=table?.querySelector('thead tr');if(!head)return;
+    const card=table.closest('.card');
+    if(!isAfacon()){
+      removeQualification(body);
+      card?.querySelector('#qualificationNote')?.remove();
+      return;
+    }
     if(!head.querySelector('[data-qualification]')){const th=document.createElement('th');th.dataset.qualification='1';th.textContent='Situación';head.appendChild(th)}
     const rows=[...body.querySelectorAll('tr')];const comp=S.comps.find(x=>x.id===document.querySelector('#pubCompetition')?.value);
-    rows.forEach(r=>{const cells=r.querySelectorAll('td');if(!cells.length)return;const pos=Number(cells[0].textContent);if(!Number.isFinite(pos))return;let td=r.querySelector('[data-qualification]');if(!td){td=document.createElement('td');td.dataset.qualification='1';r.appendChild(td)}td.innerHTML=`<b>${qualificationStatus(pos,rows.length,comp?.name)}</b>`});
-    const card=table.closest('.card');if(card){let note=card.querySelector('#qualificationNote');if(!note){note=document.createElement('p');note.id='qualificationNote';note.className='muted';const h=card.querySelector('h3');h?.after(note)}note.textContent=qualificationNote(comp?.name)}
+    rows.forEach(r=>{
+      const cells=r.querySelectorAll('td');if(!cells.length)return;
+      const pos=Number(cells[0].textContent);if(!Number.isFinite(pos))return;
+      let td=r.querySelector('[data-qualification]');if(!td){td=document.createElement('td');td.dataset.qualification='1';r.appendChild(td)}
+      td.innerHTML=`<b>${afaconGeneralStatus(pos,rows.length,comp?.name)}</b>`;
+    });
+    if(card){
+      let note=card.querySelector('#qualificationNote');if(!note){note=document.createElement('p');note.id='qualificationNote';note.className='muted';const h=card.querySelector('h3');h?.after(note)}
+      const c=norm(comp?.name);
+      note.textContent=c.includes('liga a')?'Afacon Liga A: 1° Copa Regional; 2° y 3° a liguilla regional; los 2 últimos descienden y el antepenúltimo juega repechaje con el 3° de Liga B.':c.includes('liga b')?'Afacon Liga B: 1° y 2° ascienden y juegan liguilla regional; el 3° juega repechaje por el ascenso contra el antepenúltimo de Liga A.':'';
+    }
   }
+
   function ensureAdminGeneral(){
-    const panel=document.querySelector('#p-tables');if(!panel||document.querySelector('#adminGeneralCard'))return;
-    const card=document.createElement('div');card.id='adminGeneralCard';card.className='card';card.style.marginTop='16px';
+    const panel=document.querySelector('#p-tables');if(!panel)return;
+    let card=document.querySelector('#adminGeneralCard');
+    if(!isAfacon()){
+      if(card)card.remove();
+      return;
+    }
+    if(card)return;
+    card=document.createElement('div');card.id='adminGeneralCard';card.className='card';card.style.marginTop='16px';
     card.innerHTML='<h3>Tabla general acumulada · clasificación</h3><p id="adminQualificationNote" class="muted"></p><div class="table"><table><thead><tr><th>POS</th><th>Equipo</th><th>PTS</th><th>Situación</th></tr></thead><tbody id="adminGeneral"></tbody></table></div>';
     panel.appendChild(card);
   }
+
   let generalTimer;
   async function loadAdminGeneral(){
-    ensureAdminGeneral();const body=document.querySelector('#adminGeneral');if(!body||!S.u)return;
+    ensureAdminGeneral();
+    if(!isAfacon())return;
+    const body=document.querySelector('#adminGeneral');if(!body||!S.u)return;
     const cid=document.querySelector('#competition')?.value;if(!cid){body.innerHTML='<tr><td colspan="4">Sin datos disponibles.</td></tr>';return}
     const comp=S.comps.find(x=>x.id===cid);const {data,error}=await sb.rpc('get_general_standings',{p_competition_id:cid});
     if(error){body.innerHTML=`<tr><td colspan="4">${error.message}</td></tr>`;return}
-    const list=data||[];body.innerHTML=list.map(x=>`<tr><td>${x.pos}</td><td>${x.team_name}</td><td><b>${x.pts}</b></td><td><b>${qualificationStatus(Number(x.pos),list.length,comp?.name)}</b></td></tr>`).join('')||'<tr><td colspan="4">Sin datos disponibles.</td></tr>';
-    const note=document.querySelector('#adminQualificationNote');if(note)note.textContent=qualificationNote(comp?.name);
+    const list=data||[];body.innerHTML=list.map(x=>`<tr><td>${x.pos}</td><td>${x.team_name}</td><td><b>${x.pts}</b></td><td><b>${afaconGeneralStatus(Number(x.pos),list.length,comp?.name)}</b></td></tr>`).join('')||'<tr><td colspan="4">Sin datos disponibles.</td></tr>';
+    const note=document.querySelector('#adminQualificationNote');if(note){const c=norm(comp?.name);note.textContent=c.includes('liga a')?'Afacon Liga A: 1° Copa Regional; 2° y 3° a liguilla regional; los 2 últimos descienden y el antepenúltimo juega repechaje con el 3° de Liga B.':c.includes('liga b')?'Afacon Liga B: 1° y 2° ascienden y juegan liguilla regional; el 3° juega repechaje por el ascenso contra el antepenúltimo de Liga A.':''}
   }
+
   function scheduleAdminGeneral(){clearTimeout(generalTimer);generalTimer=setTimeout(loadAdminGeneral,120)}
+
   function installQualificationViews(){
-    ensureAdminGeneral();decoratePublicGeneral();scheduleAdminGeneral();
-    const pub=document.querySelector('#pubGeneral');if(pub&&!pub.dataset.qualWatch){pub.dataset.qualWatch='1';new MutationObserver(()=>decoratePublicGeneral()).observe(pub,{childList:true})}
-    const standings=document.querySelector('#standings');if(standings&&!standings.dataset.qualWatch){standings.dataset.qualWatch='1';new MutationObserver(()=>scheduleAdminGeneral()).observe(standings,{childList:true})}
-    const pc=document.querySelector('#pubCompetition');if(pc&&!pc.dataset.qualWatch){pc.dataset.qualWatch='1';pc.addEventListener('change',()=>setTimeout(decoratePublicGeneral,150))}
-    const ac=document.querySelector('#competition');if(ac&&!ac.dataset.qualWatch){ac.dataset.qualWatch='1';ac.addEventListener('change',scheduleAdminGeneral)}
+    decorateSeriesTable(document.querySelector('#pubStandings'));
+    decorateSeriesTable(document.querySelector('#standings'));
+    decoratePublicGeneral();
+    ensureAdminGeneral();scheduleAdminGeneral();
+
+    const pubSeriesBody=document.querySelector('#pubStandings');
+    if(pubSeriesBody&&!pubSeriesBody.dataset.qualWatch){pubSeriesBody.dataset.qualWatch='1';new MutationObserver(()=>decorateSeriesTable(pubSeriesBody)).observe(pubSeriesBody,{childList:true})}
+    const adminSeriesBody=document.querySelector('#standings');
+    if(adminSeriesBody&&!adminSeriesBody.dataset.qualWatch){adminSeriesBody.dataset.qualWatch='1';new MutationObserver(()=>{decorateSeriesTable(adminSeriesBody);scheduleAdminGeneral()}).observe(adminSeriesBody,{childList:true})}
+    const pubGen=document.querySelector('#pubGeneral');
+    if(pubGen&&!pubGen.dataset.qualWatch){pubGen.dataset.qualWatch='1';new MutationObserver(()=>decoratePublicGeneral()).observe(pubGen,{childList:true})}
+
+    const pc=document.querySelector('#pubCompetition');if(pc&&!pc.dataset.qualWatch){pc.dataset.qualWatch='1';pc.addEventListener('change',()=>setTimeout(()=>{decorateSeriesTable(pubSeriesBody);decoratePublicGeneral()},150))}
+    const ps=document.querySelector('#pubSeries');if(ps&&!ps.dataset.qualWatch){ps.dataset.qualWatch='1';ps.addEventListener('change',()=>setTimeout(()=>decorateSeriesTable(pubSeriesBody),150))}
+    const ac=document.querySelector('#competition');if(ac&&!ac.dataset.qualWatch){ac.dataset.qualWatch='1';ac.addEventListener('change',()=>{setTimeout(()=>decorateSeriesTable(adminSeriesBody),120);scheduleAdminGeneral()})}
+    const as=document.querySelector('#series');if(as&&!as.dataset.qualWatch){as.dataset.qualWatch='1';as.addEventListener('change',()=>setTimeout(()=>decorateSeriesTable(adminSeriesBody),120))}
   }
 
   function init(){
@@ -186,7 +252,11 @@
     ensurePanels();installAdminGate();installManualVenue();installQualificationViews();
     const nav=document.querySelector('#nav');
     new MutationObserver(()=>{ensurePanels();patchNav();installManualVenue();installQualificationViews()}).observe(nav,{childList:true});
-    setInterval(()=>{decoratePublicGeneral();if(!document.querySelector('#adminView').classList.contains('hidden')){patchNav();installManualVenue();installQualificationViews()}},900);
+    setInterval(()=>{
+      decorateSeriesTable(document.querySelector('#pubStandings'));
+      decoratePublicGeneral();
+      if(!document.querySelector('#adminView').classList.contains('hidden')){patchNav();installManualVenue();installQualificationViews()}
+    },900);
   }
   init();
 })();
