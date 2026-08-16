@@ -1,7 +1,7 @@
 (()=>{
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-const isAfacon=()=>norm(window.S?.aName).includes('afacon');
+const isAfacon=()=>norm(S?.aName).includes('afacon');
 const internal=n=>{n=norm(n);return n.includes('serie primera')||n.includes('primera adulta')||n.includes('segunda serie')};
 const style=document.createElement('style');
 style.textContent=`
@@ -46,8 +46,8 @@ function generalRule(pos,total,cn){
  }
  return [champ,x].filter(Boolean).join(' · ')||'—';
 }
-function currentSeries(pub){const id=$(pub?'#pubSeries':'#series')?.value;return window.S?.series?.find(x=>x.id===id)?.name||''}
-function currentComp(pub){const id=$(pub?'#pubCompetition':'#competition')?.value;return window.S?.comps?.find(x=>x.id===id)?.name||''}
+function currentSeries(pub){const id=$(pub?'#pubSeries':'#series')?.value;return S?.series?.find(x=>x.id===id)?.name||''}
+function currentComp(pub){const id=$(pub?'#pubCompetition':'#competition')?.value;return S?.comps?.find(x=>x.id===id)?.name||''}
 function ensureSituation(body,pub){
  if(!body)return;
  const table=body.closest('table'),head=table?.querySelector('thead tr');if(!head)return;
@@ -72,9 +72,9 @@ function ensureGeneralCard(pub){
 }
 let lastPub='',lastAdm='',busyPub=false,busyAdm=false;
 async function renderGeneral(pub,force=false){
- if(!window.sb||!window.S)return;ensureGeneralCard(pub);
+ if(!sb||!S)return;ensureGeneralCard(pub);
  const cid=$(pub?'#pubCompetition':'#competition')?.value;if(!cid)return;
- const key=`${window.S.a}|${cid}`;if(!force&&key===(pub?lastPub:lastAdm)){
+ const key=`${S.a}|${cid}`;if(!force&&key===(pub?lastPub:lastAdm)){
    decorateGeneral(pub);return;
  }
  if(pub?busyPub:busyAdm)return;pub?busyPub=true:busyAdm=true;
@@ -82,22 +82,22 @@ async function renderGeneral(pub,force=false){
    const {data,error}=await sb.rpc('get_general_standings',{p_competition_id:cid});
    const body=$(pub?'#pubGeneral':'#adminGeneral');if(!body)return;
    if(error){body.innerHTML=`<tr><td colspan="4">${error.message}</td></tr>`;return}
-   const comp=window.S.comps?.find(x=>x.id===cid),list=data||[];
+   const comp=S.comps?.find(x=>x.id===cid),list=data||[];
    body.innerHTML=list.map(x=>`<tr><td>${x.pos}</td><td>${String(x.team_name??'')}</td><td><b>${x.pts}</b></td><td data-qualification><b>${generalRule(Number(x.pos),list.length,comp?.name)}</b></td></tr>`).join('')||'<tr><td colspan="4">Sin datos disponibles.</td></tr>';
    const head=body.closest('table')?.querySelector('thead tr');if(head){while(head.children.length<4){const th=document.createElement('th');th.textContent='Situación';th.dataset.qualification='1';head.appendChild(th)}head.lastElementChild.dataset.qualification='1';head.lastElementChild.textContent='Situación'}
    if(pub)lastPub=key;else lastAdm=key;
  }finally{pub?busyPub=false:busyAdm=false}
 }
 function decorateGeneral(pub){
- const body=$(pub?'#pubGeneral':'#adminGeneral');if(!body)return;const cid=$(pub?'#pubCompetition':'#competition')?.value,comp=window.S?.comps?.find(x=>x.id===cid),rows=[...body.querySelectorAll('tr')];
+ const body=$(pub?'#pubGeneral':'#adminGeneral');if(!body)return;const cid=$(pub?'#pubCompetition':'#competition')?.value,comp=S?.comps?.find(x=>x.id===cid),rows=[...body.querySelectorAll('tr')];
  rows.forEach(r=>{const c=r.querySelectorAll('td'),pos=Number(c[0]?.textContent);if(!Number.isFinite(pos))return;let td=r.querySelector('td[data-qualification]');if(!td){td=document.createElement('td');td.dataset.qualification='1';r.appendChild(td)}td.innerHTML=`<b>${generalRule(pos,rows.length,comp?.name)}</b>`});
 }
 function refresh(force=false){
- if(!window.S||!window.sb)return;
+ if(!S||!sb)return;
  ensureSituation($('#pubStandings'),true);ensureSituation($('#standings'),false);
  renderGeneral(true,force);if(!$('#adminView')?.classList.contains('hidden'))renderGeneral(false,force);
 }
 function bind(){['pubCompetition','pubSeries','competition','series','pubAssociation','ownerAssociation'].forEach(id=>{const el=$('#'+id);if(el&&!el.dataset.classFix){el.dataset.classFix='1';el.addEventListener('change',()=>{lastPub='';lastAdm='';setTimeout(()=>refresh(true),220)})}});['pubStandings','standings','pubGeneral'].forEach(id=>{const el=$('#'+id);if(el&&!el.dataset.classObs){el.dataset.classObs='1';new MutationObserver(()=>setTimeout(()=>refresh(false),60)).observe(el,{childList:true,subtree:true})}})}
-function init(){if(!window.S||!window.sb||!$('#publicView'))return setTimeout(init,100);bind();refresh(true);setInterval(()=>{bind();refresh(false)},900)}
+function init(){if(!S||!sb||!$('#publicView'))return setTimeout(init,100);bind();refresh(true);setInterval(()=>{bind();refresh(false)},900)}
 init();
 })();
