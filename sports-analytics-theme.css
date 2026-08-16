@@ -70,9 +70,40 @@ main{background:transparent}.panel{max-width:1260px}
 #pub-tables:after{content:"DATOS OFICIALES · TABLAS · CLASIFICACIÓN";display:block;margin-top:16px;padding:12px 14px;background:#fff;border:1px solid #d9dddd;color:#52626a;font-size:.68rem;font-weight:900;letter-spacing:.12em;text-align:center}
 #pub-fixtures .fixture:before,#fixtures .fixture:before{content:"PARTIDO";display:inline-block;margin:-20px 0 12px -20px;background:var(--accent);color:#fff;padding:6px 10px;font-size:.62rem;letter-spacing:.12em;font-weight:950}
 
+/* Clasificación y tabla general siempre visibles */
+#pub-tables>.card{display:block!important;visibility:visible!important;opacity:1!important}
+#pub-tables>.card>h3,#adminGeneralCard>h3{display:flex;align-items:center;gap:10px;margin:0 0 10px;color:#fff;text-transform:uppercase;letter-spacing:.02em}
+#pub-tables>.card>h3:before,#adminGeneralCard>h3:before{content:"GENERAL";background:var(--accent);color:#fff;padding:6px 8px;font-size:.58rem;letter-spacing:.12em;border-radius:2px}
+#pubStandings [data-qualification] b,#standings [data-qualification] b,#pubGeneral [data-qualification] b,#adminGeneral td:last-child b{display:inline-block!important;background:#fff!important;color:#071a22!important;border-left:4px solid var(--accent);padding:7px 9px!important;line-height:1.15;white-space:normal;min-width:110px;text-align:left}
+
 @media(max-width:850px){
   .layout{grid-template-columns:1fr}nav{display:flex;overflow:auto;border-right:0;border-bottom:5px solid var(--accent);box-shadow:0 8px 24px rgba(5,28,37,.17)}nav button{white-space:nowrap}.section-title{align-items:flex-start}.tabs{overflow:auto;flex-wrap:nowrap;padding-bottom:4px}.tabs button{white-space:nowrap}
 }
 @media(max-width:560px){
   body{background:linear-gradient(#f4f4f1,#ededeb)}.top{padding:12px 14px;border-bottom-width:4px}.top:before{width:62px;right:4%}.top h1{font-size:.98rem;line-height:1.15}.top small{font-size:.6rem}.public-main,main{padding:12px}.card{padding:14px}.section-title{padding:12px 12px;border-left-width:6px}.section-title h2{font-size:1.22rem}.filters{width:100%}.filters label{min-width:0}th,td{padding:10px 8px}.table{border-radius:2px}.tabs button{padding:9px 14px}.badge{display:none}
+
+  /* En celular prioriza los datos que realmente importan: equipo, PJ, DG, PTS y situación */
+  #pubStandings.closest-table-placeholder{display:none}
+  #pubStandings{font-size:.78rem}
+  #pubStandings tr>*:nth-child(4),#pubStandings tr>*:nth-child(5),#pubStandings tr>*:nth-child(6),#pubStandings tr>*:nth-child(7),#pubStandings tr>*:nth-child(8),
+  #standings tr>*:nth-child(4),#standings tr>*:nth-child(5),#standings tr>*:nth-child(6),#standings tr>*:nth-child(7),#standings tr>*:nth-child(8){display:none}
+  #pubStandings.closest-table-placeholder{display:none}
+  #pubStandings td:nth-child(2),#standings td:nth-child(2){text-align:left;min-width:132px}
+  #pubStandings td:nth-child(3),#standings td:nth-child(3){min-width:38px}
+  #pubStandings td:nth-child(9),#standings td:nth-child(9){min-width:42px}
+  #pubStandings td:nth-child(10),#standings td:nth-child(10){min-width:48px;font-size:1rem;font-weight:950}
+  #pubStandings td:nth-child(11),#standings td:nth-child(11){min-width:118px}
+  #pubStandings.closest-table-placeholder{display:none}
+  #pubStandings,#standings{white-space:normal}
+  #pubStandings.closest-table-placeholder{display:none}
+  #pubStandings tr,#standings tr{height:auto}
+  #pubStandings.closest-table-placeholder{display:none}
+  #pubStandings:not(:empty),#standings:not(:empty){display:table-row-group}
+  #pubStandings.closest-table-placeholder{display:none}
+  #pubStandings~*,#standings~*{visibility:visible}
+  #pubStandings.closest-table-placeholder{display:none}
+  #pub-tables .table table,#p-tables .table table{min-width:620px}
+  #pub-tables>.card{margin-top:18px!important;padding:14px!important}
+  #pub-tables>.card .table table,#adminGeneralCard .table table{min-width:460px!important}
+  #pubGeneral td,#adminGeneral td{white-space:normal}
 }
