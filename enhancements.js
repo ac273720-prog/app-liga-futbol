@@ -112,13 +112,47 @@
     },500);
   }
 
+  function installManualVenue(){
+    const form=document.querySelector('#fixtureForm');
+    const old=document.querySelector('#fVenue');
+    if(!form||!old||old.dataset.manualVenue==='1')return;
+    const label=old.closest('label');
+    if(!label)return;
+    const input=document.createElement('input');
+    input.id='fVenue';
+    input.type='text';
+    input.placeholder='Ej: Estadio Municipal, Cancha El Bosque, Sin cancha fija';
+    input.autocomplete='off';
+    input.dataset.manualVenue='1';
+    old.replaceWith(input);
+    label.firstChild.textContent='Cancha / recinto';
+
+    form.onsubmit=async e=>{
+      e.preventDefault();
+      if(!canSchedule())return flash('#fixtureMsg','No tienes permiso');
+      if(!document.querySelector('#fCompetition').value)return flash('#fixtureMsg','Primero debes tener una liga creada para esta asociación');
+      if(document.querySelector('#fHome').value===document.querySelector('#fAway').value)return flash('#fixtureMsg','Local y visita deben ser distintos');
+      const {data,error}=await sb.rpc('create_club_fixture_named_venue',{
+        p_competition_id:document.querySelector('#fCompetition').value,
+        p_home_team_id:document.querySelector('#fHome').value,
+        p_away_team_id:document.querySelector('#fAway').value,
+        p_venue_name:document.querySelector('#fVenue').value.trim()||null,
+        p_fixture_date:document.querySelector('#fDate').value,
+        p_round_number:document.querySelector('#fRound').value?Number(document.querySelector('#fRound').value):null
+      });
+      flash('#fixtureMsg',error?.message||(data?'Fecha programada correctamente':'Fecha programada'),!error);
+      if(!error){form.reset();syncFixtureClubs();installManualVenue();await loadFixtures()}
+    };
+  }
+
   function init(){
     if(!waitForApp())return setTimeout(init,100);
     ensurePanels();
     installAdminGate();
+    installManualVenue();
     const nav=document.querySelector('#nav');
-    new MutationObserver(()=>{ensurePanels();patchNav()}).observe(nav,{childList:true});
-    setInterval(()=>{if(!document.querySelector('#adminView').classList.contains('hidden'))patchNav()},800);
+    new MutationObserver(()=>{ensurePanels();patchNav();installManualVenue()}).observe(nav,{childList:true});
+    setInterval(()=>{if(!document.querySelector('#adminView').classList.contains('hidden')){patchNav();installManualVenue()}},800);
   }
   init();
 })();
