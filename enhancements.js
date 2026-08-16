@@ -83,9 +83,39 @@
     }catch(err){host.innerHTML=`<div class="msg error">${err?.message||'No se pudieron cargar los informes.'}</div>`}
   }
 
+  function installAdminGate(){
+    const adminBtn=document.querySelector('#adminLoginBtn');
+    const ownerBtn=document.querySelector('#ownerLoginBtn');
+    const loginForm=document.querySelector('#loginForm');
+    const backBtn=document.querySelector('#backPublic');
+
+    if(adminBtn)adminBtn.onclick=()=>document.querySelector('#loginModal')?.classList.remove('hidden');
+    if(ownerBtn)ownerBtn.onclick=()=>document.querySelector('#loginModal')?.classList.remove('hidden');
+    if(loginForm)loginForm.addEventListener('submit',()=>sessionStorage.setItem('adminGate','1'),true);
+    if(backBtn)backBtn.onclick=async()=>{
+      const aid=S.a;
+      if(aid)localStorage.setItem('publicAssociation',aid);
+      sessionStorage.removeItem('adminGate');
+      await sb.auth.signOut();
+      S.u=null;
+      await startPublic();
+    };
+
+    setTimeout(async()=>{
+      const {data:{session}}=await sb.auth.getSession();
+      const gate=sessionStorage.getItem('adminGate')==='1';
+      if(session&&!gate){
+        await sb.auth.signOut();
+        S.u=null;
+        await startPublic();
+      }
+    },500);
+  }
+
   function init(){
     if(!waitForApp())return setTimeout(init,100);
     ensurePanels();
+    installAdminGate();
     const nav=document.querySelector('#nav');
     new MutationObserver(()=>{ensurePanels();patchNav()}).observe(nav,{childList:true});
     setInterval(()=>{if(!document.querySelector('#adminView').classList.contains('hidden'))patchNav()},800);
