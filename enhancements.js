@@ -56,7 +56,7 @@
       const path=`${S.u.team_id}/logo-${Date.now()}.${ext}`;
       const {error:upErr}=await sb.storage.from('team-logos').upload(path,file,{cacheControl:'3600'});if(upErr)throw upErr;
       const {data:urlData}=sb.storage.from('team-logos').getPublicUrl(path);const url=urlData.publicUrl;
-      const {error:dbErr}=await sb.from('teams').update({logo_url:url}).eq('id',S.u.team_id);if(dbErr)throw dbErr;
+      const {error:dbErr}=await sb.rpc('set_my_team_logo',{p_logo_url:url});if(dbErr)throw dbErr;
       const team=S.teams.find(t=>t.id===S.u.team_id);if(team)team.logo_url=url;
       msg.textContent='Logo actualizado correctamente.';msg.className='msg ok';renderClubPanel();e.target.reset();
     }catch(err){msg.textContent=err?.message||'No se pudo subir el logo.';msg.className='msg error'}
@@ -88,71 +88,105 @@
     const ownerBtn=document.querySelector('#ownerLoginBtn');
     const loginForm=document.querySelector('#loginForm');
     const backBtn=document.querySelector('#backPublic');
-
     if(adminBtn)adminBtn.onclick=()=>document.querySelector('#loginModal')?.classList.remove('hidden');
     if(ownerBtn)ownerBtn.onclick=()=>document.querySelector('#loginModal')?.classList.remove('hidden');
     if(loginForm)loginForm.addEventListener('submit',()=>sessionStorage.setItem('adminGate','1'),true);
     if(backBtn)backBtn.onclick=async()=>{
-      const aid=S.a;
-      if(aid)localStorage.setItem('publicAssociation',aid);
-      sessionStorage.removeItem('adminGate');
-      await sb.auth.signOut();
-      S.u=null;
-      await startPublic();
+      const aid=S.a;if(aid)localStorage.setItem('publicAssociation',aid);
+      sessionStorage.removeItem('adminGate');await sb.auth.signOut();S.u=null;await startPublic();
     };
-
     setTimeout(async()=>{
-      const {data:{session}}=await sb.auth.getSession();
-      const gate=sessionStorage.getItem('adminGate')==='1';
-      if(session&&!gate){
-        await sb.auth.signOut();
-        S.u=null;
-        await startPublic();
-      }
+      const {data:{session}}=await sb.auth.getSession();const gate=sessionStorage.getItem('adminGate')==='1';
+      if(session&&!gate){await sb.auth.signOut();S.u=null;await startPublic()}
     },500);
   }
 
   function installManualVenue(){
-    const form=document.querySelector('#fixtureForm');
-    const old=document.querySelector('#fVenue');
+    const form=document.querySelector('#fixtureForm');const old=document.querySelector('#fVenue');
     if(!form||!old||old.dataset.manualVenue==='1')return;
-    const label=old.closest('label');
-    if(!label)return;
-    const input=document.createElement('input');
-    input.id='fVenue';
-    input.type='text';
-    input.placeholder='Ej: Estadio Municipal, Cancha El Bosque, Sin cancha fija';
-    input.autocomplete='off';
-    input.dataset.manualVenue='1';
-    old.replaceWith(input);
-    label.firstChild.textContent='Cancha / recinto';
-
+    const label=old.closest('label');if(!label)return;
+    const input=document.createElement('input');input.id='fVenue';input.type='text';input.placeholder='Ej: Estadio Municipal, Cancha El Bosque, Sin cancha fija';input.autocomplete='off';input.dataset.manualVenue='1';old.replaceWith(input);label.firstChild.textContent='Cancha / recinto';
     form.onsubmit=async e=>{
       e.preventDefault();
       if(!canSchedule())return flash('#fixtureMsg','No tienes permiso');
       if(!document.querySelector('#fCompetition').value)return flash('#fixtureMsg','Primero debes tener una liga creada para esta asociación');
       if(document.querySelector('#fHome').value===document.querySelector('#fAway').value)return flash('#fixtureMsg','Local y visita deben ser distintos');
       const {data,error}=await sb.rpc('create_club_fixture_named_venue',{
-        p_competition_id:document.querySelector('#fCompetition').value,
-        p_home_team_id:document.querySelector('#fHome').value,
-        p_away_team_id:document.querySelector('#fAway').value,
-        p_venue_name:document.querySelector('#fVenue').value.trim()||null,
-        p_fixture_date:document.querySelector('#fDate').value,
-        p_round_number:document.querySelector('#fRound').value?Number(document.querySelector('#fRound').value):null
+        p_competition_id:document.querySelector('#fCompetition').value,p_home_team_id:document.querySelector('#fHome').value,p_away_team_id:document.querySelector('#fAway').value,p_venue_name:document.querySelector('#fVenue').value.trim()||null,p_fixture_date:document.querySelector('#fDate').value,p_round_number:document.querySelector('#fRound').value?Number(document.querySelector('#fRound').value):null
       });
       flash('#fixtureMsg',error?.message||(data?'Fecha programada correctamente':'Fecha programada'),!error);
       if(!error){form.reset();syncFixtureClubs();installManualVenue();await loadFixtures()}
     };
   }
 
+  const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  function qualificationStatus(pos,total,competitionName){
+    const afacon=norm(S.aName).includes('afacon');
+    if(!afacon){
+      if(pos===1)return '🏆 Copa Regional';
+      if(pos>=2&&pos<=5)return '⚔️ Liguilla';
+      return '—';
+    }
+    const c=norm(competitionName);
+    if(c.includes('liga a')){
+      if(pos===1)return '🏆 Copa Regional';
+      if(pos===2||pos===3)return '⚔️ Liguilla Copa Regional';
+      if(pos===Math.max(1,total-2))return '⚠️ Repechaje permanencia';
+      if(pos>=Math.max(1,total-1))return '⬇️ Descenso a Liga B';
+      return '—';
+    }
+    if(c.includes('liga b')){
+      if(pos===1||pos===2)return '⬆️ Ascenso a Liga A · ⚔️ Liguilla Copa Regional';
+      if(pos===3)return '⚠️ Repechaje ascenso';
+      return '—';
+    }
+    return '—';
+  }
+  function qualificationNote(competitionName){
+    if(!norm(S.aName).includes('afacon'))return 'Situación provisoria según la tabla general: 1° clasifica a Copa Regional y del 2° al 5° están en zona de liguilla.';
+    const c=norm(competitionName);
+    if(c.includes('liga a'))return 'Afacon Liga A: 1° Copa Regional; 2° y 3° a liguilla regional; los 2 últimos descienden y el antepenúltimo juega repechaje con el 3° de Liga B.';
+    if(c.includes('liga b'))return 'Afacon Liga B: 1° y 2° ascienden y juegan liguilla regional; el 3° juega repechaje por el ascenso contra el antepenúltimo de Liga A.';
+    return '';
+  }
+  function decoratePublicGeneral(){
+    const body=document.querySelector('#pubGeneral');if(!body)return;
+    const table=body.closest('table'),head=table?.querySelector('thead tr');if(!head)return;
+    if(!head.querySelector('[data-qualification]')){const th=document.createElement('th');th.dataset.qualification='1';th.textContent='Situación';head.appendChild(th)}
+    const rows=[...body.querySelectorAll('tr')];const comp=S.comps.find(x=>x.id===document.querySelector('#pubCompetition')?.value);
+    rows.forEach(r=>{const cells=r.querySelectorAll('td');if(!cells.length)return;const pos=Number(cells[0].textContent);if(!Number.isFinite(pos))return;let td=r.querySelector('[data-qualification]');if(!td){td=document.createElement('td');td.dataset.qualification='1';r.appendChild(td)}td.innerHTML=`<b>${qualificationStatus(pos,rows.length,comp?.name)}</b>`});
+    const card=table.closest('.card');if(card){let note=card.querySelector('#qualificationNote');if(!note){note=document.createElement('p');note.id='qualificationNote';note.className='muted';const h=card.querySelector('h3');h?.after(note)}note.textContent=qualificationNote(comp?.name)}
+  }
+  function ensureAdminGeneral(){
+    const panel=document.querySelector('#p-tables');if(!panel||document.querySelector('#adminGeneralCard'))return;
+    const card=document.createElement('div');card.id='adminGeneralCard';card.className='card';card.style.marginTop='16px';
+    card.innerHTML='<h3>Tabla general acumulada · clasificación</h3><p id="adminQualificationNote" class="muted"></p><div class="table"><table><thead><tr><th>POS</th><th>Equipo</th><th>PTS</th><th>Situación</th></tr></thead><tbody id="adminGeneral"></tbody></table></div>';
+    panel.appendChild(card);
+  }
+  let generalTimer;
+  async function loadAdminGeneral(){
+    ensureAdminGeneral();const body=document.querySelector('#adminGeneral');if(!body||!S.u)return;
+    const cid=document.querySelector('#competition')?.value;if(!cid){body.innerHTML='<tr><td colspan="4">Sin datos disponibles.</td></tr>';return}
+    const comp=S.comps.find(x=>x.id===cid);const {data,error}=await sb.rpc('get_general_standings',{p_competition_id:cid});
+    if(error){body.innerHTML=`<tr><td colspan="4">${error.message}</td></tr>`;return}
+    const list=data||[];body.innerHTML=list.map(x=>`<tr><td>${x.pos}</td><td>${x.team_name}</td><td><b>${x.pts}</b></td><td><b>${qualificationStatus(Number(x.pos),list.length,comp?.name)}</b></td></tr>`).join('')||'<tr><td colspan="4">Sin datos disponibles.</td></tr>';
+    const note=document.querySelector('#adminQualificationNote');if(note)note.textContent=qualificationNote(comp?.name);
+  }
+  function scheduleAdminGeneral(){clearTimeout(generalTimer);generalTimer=setTimeout(loadAdminGeneral,120)}
+  function installQualificationViews(){
+    ensureAdminGeneral();decoratePublicGeneral();scheduleAdminGeneral();
+    const pub=document.querySelector('#pubGeneral');if(pub&&!pub.dataset.qualWatch){pub.dataset.qualWatch='1';new MutationObserver(()=>decoratePublicGeneral()).observe(pub,{childList:true})}
+    const standings=document.querySelector('#standings');if(standings&&!standings.dataset.qualWatch){standings.dataset.qualWatch='1';new MutationObserver(()=>scheduleAdminGeneral()).observe(standings,{childList:true})}
+    const pc=document.querySelector('#pubCompetition');if(pc&&!pc.dataset.qualWatch){pc.dataset.qualWatch='1';pc.addEventListener('change',()=>setTimeout(decoratePublicGeneral,150))}
+    const ac=document.querySelector('#competition');if(ac&&!ac.dataset.qualWatch){ac.dataset.qualWatch='1';ac.addEventListener('change',scheduleAdminGeneral)}
+  }
+
   function init(){
     if(!waitForApp())return setTimeout(init,100);
-    ensurePanels();
-    installAdminGate();
-    installManualVenue();
+    ensurePanels();installAdminGate();installManualVenue();installQualificationViews();
     const nav=document.querySelector('#nav');
-    new MutationObserver(()=>{ensurePanels();patchNav();installManualVenue()}).observe(nav,{childList:true});
-    setInterval(()=>{if(!document.querySelector('#adminView').classList.contains('hidden')){patchNav();installManualVenue()}},800);
+    new MutationObserver(()=>{ensurePanels();patchNav();installManualVenue();installQualificationViews()}).observe(nav,{childList:true});
+    setInterval(()=>{decoratePublicGeneral();if(!document.querySelector('#adminView').classList.contains('hidden')){patchNav();installManualVenue();installQualificationViews()}},900);
   }
   init();
 })();
