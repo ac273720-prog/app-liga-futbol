@@ -1,0 +1,43 @@
+name: Corregir nombre y acceso administrador
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/fix-brand-login.yml']
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Corregir index
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          s=s.replace('<title>Plataforma de Ligas de Fútbol</title>','<title>Linares Score Futbol Amateur</title>')
+          s=s.replace('<h1 id="publicTitle">⚽ Ligas de Fútbol</h1>','<h1 id="publicTitle">⚽ Linares Score Futbol Amateur</h1>')
+          s=s.replace('<h1 id="adminTitle">⚽ Liga de Fútbol</h1>','<h1 id="adminTitle">⚽ Linares Score Futbol Amateur</h1>')
+          old="function currentAssoc(){return S.assocs.find(x=>x.id===S.a)}function refreshTitles(){S.aName=currentAssoc()?.name||S.aName||'Liga de Fútbol';if($('#publicTitle'))$('#publicTitle').textContent='⚽ '+S.aName;if($('#adminTitle'))$('#adminTitle').textContent='⚽ '+S.aName;if($('#suspendedTitle'))$('#suspendedTitle').textContent=S.aName;if($('#controlAssociationName'))$('#controlAssociationName').textContent=S.aName;document.title=S.aName+' · Plataforma de Ligas'}"
+          new="function currentAssoc(){return S.assocs.find(x=>x.id===S.a)}function refreshTitles(){S.aName=currentAssoc()?.name||S.aName||'FÚTBOL AMATEUR';if($('#publicTitle'))$('#publicTitle').textContent='⚽ Linares Score Futbol Amateur';if($('#adminTitle'))$('#adminTitle').textContent='⚽ Linares Score Futbol Amateur';if($('#suspendedTitle'))$('#suspendedTitle').textContent='Linares Score Futbol Amateur';if($('#controlAssociationName'))$('#controlAssociationName').textContent=S.aName;document.title='Linares Score Futbol Amateur · '+S.aName}"
+          if old not in s: raise SystemExit('No se encontró refreshTitles esperado')
+          s=s.replace(old,new)
+          old2="$('#adminLoginBtn').onclick=async()=>{const {data:{session}}=await sb.auth.getSession();if(session&&S.u)return bootAdmin();$('#loginModal').classList.remove('hidden')};$('#ownerLoginBtn').onclick=()=>$('#loginModal').classList.remove('hidden');$('#closeLogin').onclick=()=>$('#loginModal').classList.add('hidden');$('#loginForm').onsubmit=async e=>{e.preventDefault();flash('#loginMsg','Ingresando...');const {error}=await sb.auth.signInWithPassword({email:$('#email').value.trim(),password:$('#password').value});if(error)return flash('#loginMsg',error.message);await bootAdmin()}"
+          new2="$('#adminLoginBtn').onclick=async()=>{sessionStorage.removeItem('adminGate');await sb.auth.signOut();S.u=null;$('#loginModal').classList.remove('hidden')};$('#ownerLoginBtn').onclick=async()=>{sessionStorage.removeItem('adminGate');await sb.auth.signOut();S.u=null;$('#loginModal').classList.remove('hidden')};$('#closeLogin').onclick=()=>$('#loginModal').classList.add('hidden');$('#loginForm').onsubmit=async e=>{e.preventDefault();flash('#loginMsg','Ingresando...');const {error}=await sb.auth.signInWithPassword({email:$('#email').value.trim(),password:$('#password').value});if(error)return flash('#loginMsg',error.message);sessionStorage.setItem('adminGate','1');await bootAdmin()}"
+          if old2 not in s: raise SystemExit('No se encontró login esperado')
+          s=s.replace(old2,new2)
+          old3="(async()=>{const {data:{session}}=await sb.auth.getSession();if(session){const u=session.user;if(u.user_metadata?.invited&&u.user_metadata?.password_set!==true){$('#publicView').classList.add('hidden');$('#passwordModal').classList.remove('hidden');return}const {data:appUser}=await sb.from('app_users').select('*').eq('id',u.id).maybeSingle();if(appUser){S.u=appUser;if(await bootAdmin())return}}await startPublic()})();"
+          new3="(async()=>{const {data:{session}}=await sb.auth.getSession();if(session){const u=session.user;if(u.user_metadata?.invited&&u.user_metadata?.password_set!==true){$('#publicView').classList.add('hidden');$('#passwordModal').classList.remove('hidden');return}if(sessionStorage.getItem('adminGate')==='1'){const {data:appUser}=await sb.from('app_users').select('*').eq('id',u.id).maybeSingle();if(appUser){S.u=appUser;if(await bootAdmin())return}}else{await sb.auth.signOut();S.u=null}}await startPublic()})();"
+          if old3 not in s: raise SystemExit('No se encontró arranque esperado')
+          s=s.replace(old3,new3)
+          s=s.replace('enhancements.js?v=4','enhancements.js?v=5')
+          p.write_text(s)
+          PY
+      - name: Guardar cambios
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add index.html
+          git commit -m "Restaurar nombre Linares Score y exigir login administrador"
+          git push
