@@ -1,8 +1,19 @@
 (() => {
   const waitForApp=()=>typeof sb!=='undefined'&&typeof S!=='undefined'&&document.querySelector('#adminView');
+  const APP_NAME='Linares Score Futbol Amateur';
   const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const isAfacon=()=>norm(S.aName).includes('afacon');
   const isInternalOnlySeries=name=>{const n=norm(name);return n.includes('serie primera')||n.includes('primera adulta')||n.includes('segunda serie')};
+
+  function applyBranding(){
+    document.title=APP_NAME+(S.aName?' · '+S.aName:'');
+    const publicTitle=document.querySelector('#publicTitle'),adminTitle=document.querySelector('#adminTitle');
+    if(publicTitle)publicTitle.textContent='⚽ '+APP_NAME;
+    if(adminTitle)adminTitle.textContent='⚽ '+APP_NAME;
+    const pubSmall=publicTitle?.previousElementSibling,admSmall=adminTitle?.previousElementSibling;
+    if(pubSmall)pubSmall.textContent=S.aName||'FÚTBOL AMATEUR';
+    if(admSmall)admSmall.textContent='ADMINISTRACIÓN · '+(S.aName||'FÚTBOL AMATEUR');
+  }
 
   function ensurePanels(){
     const main=document.querySelector('#adminView main');if(!main)return;
@@ -42,6 +53,6 @@
   function scheduleFixtureArchive(){clearTimeout(archiveTimer);archiveTimer=setTimeout(decorateFixtureArchive,140)}
   function installFixtureArchive(){ensureFixtureFilters();ensureReportModal();const host=document.querySelector('#fixtures');if(host&&!host.dataset.archiveWatch){host.dataset.archiveWatch='1';new MutationObserver(scheduleFixtureArchive).observe(host,{childList:true,subtree:true})}const comp=document.querySelector('#fCompetition');if(comp&&!comp.dataset.archiveWatch){comp.dataset.archiveWatch='1';comp.addEventListener('change',()=>{reportCache.clear();setTimeout(scheduleFixtureArchive,180)})}scheduleFixtureArchive()}
 
-  function init(){if(!waitForApp())return setTimeout(init,100);ensurePanels();installAdminGate();installManualVenue();installQualificationViews();installFixtureArchive();const nav=document.querySelector('#nav');new MutationObserver(()=>{ensurePanels();patchNav();installManualVenue();installQualificationViews();installFixtureArchive()}).observe(nav,{childList:true});setInterval(()=>{decorateSeriesTable(document.querySelector('#pubStandings'));decoratePublicGeneral();if(!document.querySelector('#adminView').classList.contains('hidden')){patchNav();installManualVenue();installQualificationViews();installFixtureArchive()}},900)}
+  function init(){if(!waitForApp())return setTimeout(init,100);applyBranding();ensurePanels();installAdminGate();installManualVenue();installQualificationViews();installFixtureArchive();const nav=document.querySelector('#nav');new MutationObserver(()=>{applyBranding();ensurePanels();patchNav();installManualVenue();installQualificationViews();installFixtureArchive()}).observe(nav,{childList:true});setInterval(()=>{applyBranding();decorateSeriesTable(document.querySelector('#pubStandings'));decoratePublicGeneral();if(!document.querySelector('#adminView').classList.contains('hidden')){patchNav();installManualVenue();installQualificationViews();installFixtureArchive()}},900)}
   init();
 })();
