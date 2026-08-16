@@ -73,8 +73,20 @@
   const isAfacon=()=>norm(S.aName).includes('afacon');
   const isInternalOnlySeries=name=>{const n=norm(name);return n.includes('serie primera')||n.includes('primera adulta')||n.includes('segunda serie')};
 
-  function seriesQualificationStatus(pos,seriesName){
+  function seriesQualificationStatus(pos,seriesName,competitionName){
     if(isInternalOnlySeries(seriesName))return pos===1?'🏅 Campeón de serie':'—';
+    if(isAfacon()){
+      const c=norm(competitionName);
+      if(c.includes('liga a')){
+        if(pos===1)return '🏆 Copa Regional';
+        if(pos===2||pos===3)return '⚔️ Liguilla';
+        return '—';
+      }
+      if(c.includes('liga b')){
+        if(pos===1||pos===2)return '⚔️ Liguilla';
+        return '—';
+      }
+    }
     if(pos===1)return '🏆 Copa Regional';
     if(pos>=2&&pos<=5)return '⚔️ Liguilla';
     return '—';
@@ -96,14 +108,22 @@
   function selectedSeriesName(body){
     const isPublic=body?.id==='pubStandings';const id=document.querySelector(isPublic?'#pubSeries':'#series')?.value;return S.series.find(x=>x.id===id)?.name||'';
   }
+  function selectedCompetitionName(body){
+    const isPublic=body?.id==='pubStandings';const id=document.querySelector(isPublic?'#pubCompetition':'#competition')?.value;return S.comps.find(x=>x.id===id)?.name||'';
+  }
 
   function decorateSeriesTable(body){
     if(!body)return;const table=body.closest('table'),head=table?.querySelector('thead tr');if(!head)return;
     if(!head.querySelector('[data-qualification]')){const th=document.createElement('th');th.dataset.qualification='1';th.textContent='Situación';head.appendChild(th)}
-    const rows=[...body.querySelectorAll('tr')],seriesName=selectedSeriesName(body);
-    rows.forEach(r=>{const cells=r.querySelectorAll('td');if(!cells.length)return;const pos=Number(cells[0].textContent);if(!Number.isFinite(pos))return;let td=r.querySelector('[data-qualification]');if(!td){td=document.createElement('td');td.dataset.qualification='1';r.appendChild(td)}td.innerHTML=`<b>${seriesQualificationStatus(pos,seriesName)}</b>`});
+    const rows=[...body.querySelectorAll('tr')],seriesName=selectedSeriesName(body),competitionName=selectedCompetitionName(body);
+    rows.forEach(r=>{const cells=r.querySelectorAll('td');if(!cells.length)return;const pos=Number(cells[0].textContent);if(!Number.isFinite(pos))return;let td=r.querySelector('[data-qualification]');if(!td){td=document.createElement('td');td.dataset.qualification='1';r.appendChild(td)}td.innerHTML=`<b>${seriesQualificationStatus(pos,seriesName,competitionName)}</b>`});
     const wrap=table.closest('.table')?.parentElement;let note=wrap?.querySelector('[data-series-qualification-note]');if(wrap&&!note){note=document.createElement('p');note.dataset.seriesQualificationNote='1';note.className='muted';table.closest('.table').after(note)}
-    if(note)note.textContent=isInternalOnlySeries(seriesName)?'Esta serie define solo campeón interno; no entrega cupo a Copa Regional ni liguilla regional.':'Clasificación provisoria de esta serie: el 1° va a Copa Regional y del 2° al 5° están en zona de liguilla.';
+    if(note){
+      if(isInternalOnlySeries(seriesName))note.textContent='Esta serie define solo campeón interno; no entrega cupo a Copa Regional ni liguilla regional.';
+      else if(isAfacon()&&norm(competitionName).includes('liga a'))note.textContent='Afacon Liga A: el 1° de la serie va a Copa Regional; el 2° y 3° van a liguilla.';
+      else if(isAfacon()&&norm(competitionName).includes('liga b'))note.textContent='Afacon Liga B: el 1° y 2° de la serie van a liguilla contra los 2 clasificados de Liga A.';
+      else note.textContent='Clasificación provisoria de esta serie: el 1° va a Copa Regional y del 2° al 5° están en zona de liguilla.';
+    }
   }
 
   function decoratePublicGeneral(){
