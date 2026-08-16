@@ -1,0 +1,103 @@
+(()=>{
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const isAfacon=()=>norm(window.S?.aName).includes('afacon');
+const internal=n=>{n=norm(n);return n.includes('serie primera')||n.includes('primera adulta')||n.includes('segunda serie')};
+const style=document.createElement('style');
+style.textContent=`
+.classification-summary{margin-top:14px!important;border-top:6px solid var(--accent,#ff1f59)!important}
+.classification-summary h3{margin:0 0 10px!important}
+.classification-items{display:grid;gap:7px}
+.classification-item{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:9px 10px;background:#0a2934;border:1px solid #36525c;color:#fff}
+.classification-item b{color:#fff}.classification-item span:last-child{font-weight:900;text-align:right}
+#pubGeneralCard,#adminGeneralCard{display:block!important;visibility:visible!important;opacity:1!important;margin-top:16px!important}
+#pubGeneralCard .table,#adminGeneralCard .table{display:block!important}
+th[data-qualification],td[data-qualification]{display:table-cell!important;visibility:visible!important}
+td[data-qualification] b{display:inline-block;padding:5px 8px;background:#0a2934;color:#fff;border-left:4px solid var(--accent,#ff1f59);white-space:normal}
+@media(max-width:700px){
+ #pubGeneralCard table,#adminGeneralCard table{min-width:0!important;width:100%!important}
+ #pubGeneralCard th,#pubGeneralCard td,#adminGeneralCard th,#adminGeneralCard td{display:table-cell!important;padding:9px 6px!important;font-size:.78rem!important}
+ #pubGeneralCard th:nth-child(1),#pubGeneralCard td:nth-child(1),#adminGeneralCard th:nth-child(1),#adminGeneralCard td:nth-child(1){width:42px}
+ .classification-item{align-items:flex-start;flex-direction:column;gap:3px}
+ .classification-item span:last-child{text-align:left}
+ #pubStandings th[data-qualification],#pubStandings td[data-qualification],#standings th[data-qualification],#standings td[data-qualification]{display:table-cell!important;min-width:145px!important}
+}
+`;
+document.head.appendChild(style);
+function seriesRule(pos,sn,cn){
+ if(internal(sn))return pos===1?'🏅 Campeón de serie':'—';
+ if(isAfacon()){
+   const c=norm(cn);
+   if(c.includes('liga a'))return pos===1?'🏆 Copa Regional':(pos===2||pos===3?'⚔️ Liguilla':'—');
+   if(c.includes('liga b'))return (pos===1||pos===2)?'⚔️ Liguilla':'—';
+ }
+ return pos===1?'🏆 Copa Regional':(pos>=2&&pos<=5?'⚔️ Liguilla':'—');
+}
+function generalRule(pos,total,cn){
+ const champ=pos===1?'🏅 Campeón general':'';
+ if(!isAfacon())return champ||'—';
+ const c=norm(cn);let x='';
+ if(c.includes('liga a')){
+   if(pos===Math.max(1,total-2))x='⚠️ Repechaje permanencia';
+   if(pos>=Math.max(1,total-1))x='⬇️ Descenso a Liga B';
+ }else if(c.includes('liga b')){
+   if(pos===1||pos===2)x='⬆️ Ascenso a Liga A';
+   else if(pos===3)x='⚠️ Repechaje ascenso';
+ }
+ return [champ,x].filter(Boolean).join(' · ')||'—';
+}
+function currentSeries(pub){const id=$(pub?'#pubSeries':'#series')?.value;return window.S?.series?.find(x=>x.id===id)?.name||''}
+function currentComp(pub){const id=$(pub?'#pubCompetition':'#competition')?.value;return window.S?.comps?.find(x=>x.id===id)?.name||''}
+function ensureSituation(body,pub){
+ if(!body)return;
+ const table=body.closest('table'),head=table?.querySelector('thead tr');if(!head)return;
+ let th=head.querySelector('th[data-qualification]');if(!th){th=document.createElement('th');th.dataset.qualification='1';th.textContent='Situación';head.appendChild(th)}
+ const rows=[...body.querySelectorAll('tr')],sn=currentSeries(pub),cn=currentComp(pub);
+ rows.forEach(r=>{const cells=r.querySelectorAll('td'),pos=Number(cells[0]?.textContent);if(!Number.isFinite(pos))return;let td=r.querySelector('td[data-qualification]');if(!td){td=document.createElement('td');td.dataset.qualification='1';r.appendChild(td)}td.innerHTML=`<b>${seriesRule(pos,sn,cn)}</b>`});
+ renderSummary(body,pub,sn,cn);
+}
+function renderSummary(body,pub,sn,cn){
+ const table=body.closest('.table');if(!table)return;const id=pub?'pubQualificationSummary':'adminQualificationSummary';let box=$('#'+id);if(!box){box=document.createElement('div');box.id=id;box.className='card classification-summary';table.after(box)}
+ const rows=[...body.querySelectorAll('tr')],items=[];
+ rows.forEach(r=>{const c=r.querySelectorAll('td'),pos=Number(c[0]?.textContent),team=c[1]?.textContent?.trim();if(!Number.isFinite(pos)||!team)return;const q=seriesRule(pos,sn,cn);if(q!=='—')items.push(`<div class="classification-item"><b>${team}</b><span>${q}</span></div>`)});
+ let note=internal(sn)?'Serie interna: define campeón de serie y no entrega cupos regionales.':(isAfacon()&&norm(cn).includes('liga a')?'Afacon Liga A: 1° a Copa Regional; 2° y 3° a liguilla.':isAfacon()&&norm(cn).includes('liga b')?'Afacon Liga B: 1° y 2° a liguilla.':'1° a Copa Regional; del 2° al 5° en zona de liguilla.');
+ box.innerHTML=`<h3>Clasificación actual</h3><p class="muted">${note}</p><div class="classification-items">${items.join('')||'<div class="empty">Aún no hay posiciones para clasificar.</div>'}</div>`;
+}
+function ensureGeneralCard(pub){
+ if(pub){
+   const body=$('#pubGeneral');if(body){let card=body.closest('.card');if(card){card.id='pubGeneralCard';return card}}
+   const sec=$('#pub-tables');if(!sec)return null;const card=document.createElement('div');card.id='pubGeneralCard';card.className='card';card.innerHTML='<h3>Tabla general acumulada</h3><p class="muted">Clasificación general actual del campeonato.</p><div class="table"><table><thead><tr><th>POS</th><th>Equipo</th><th>PTS</th><th>Situación</th></tr></thead><tbody id="pubGeneral"></tbody></table></div>';sec.appendChild(card);return card;
+ }
+ const p=$('#p-tables');if(!p)return null;let card=$('#adminGeneralCard');if(!card){card=document.createElement('div');card.id='adminGeneralCard';card.className='card';card.innerHTML='<h3>Tabla general acumulada</h3><p class="muted">Clasificación general actual del campeonato.</p><div class="table"><table><thead><tr><th>POS</th><th>Equipo</th><th>PTS</th><th>Situación</th></tr></thead><tbody id="adminGeneral"></tbody></table></div>';p.appendChild(card)}return card;
+}
+let lastPub='',lastAdm='',busyPub=false,busyAdm=false;
+async function renderGeneral(pub,force=false){
+ if(!window.sb||!window.S)return;ensureGeneralCard(pub);
+ const cid=$(pub?'#pubCompetition':'#competition')?.value;if(!cid)return;
+ const key=`${window.S.a}|${cid}`;if(!force&&key===(pub?lastPub:lastAdm)){
+   decorateGeneral(pub);return;
+ }
+ if(pub?busyPub:busyAdm)return;pub?busyPub=true:busyAdm=true;
+ try{
+   const {data,error}=await sb.rpc('get_general_standings',{p_competition_id:cid});
+   const body=$(pub?'#pubGeneral':'#adminGeneral');if(!body)return;
+   if(error){body.innerHTML=`<tr><td colspan="4">${error.message}</td></tr>`;return}
+   const comp=window.S.comps?.find(x=>x.id===cid),list=data||[];
+   body.innerHTML=list.map(x=>`<tr><td>${x.pos}</td><td>${String(x.team_name??'')}</td><td><b>${x.pts}</b></td><td data-qualification><b>${generalRule(Number(x.pos),list.length,comp?.name)}</b></td></tr>`).join('')||'<tr><td colspan="4">Sin datos disponibles.</td></tr>';
+   const head=body.closest('table')?.querySelector('thead tr');if(head){while(head.children.length<4){const th=document.createElement('th');th.textContent='Situación';th.dataset.qualification='1';head.appendChild(th)}head.lastElementChild.dataset.qualification='1';head.lastElementChild.textContent='Situación'}
+   if(pub)lastPub=key;else lastAdm=key;
+ }finally{pub?busyPub=false:busyAdm=false}
+}
+function decorateGeneral(pub){
+ const body=$(pub?'#pubGeneral':'#adminGeneral');if(!body)return;const cid=$(pub?'#pubCompetition':'#competition')?.value,comp=window.S?.comps?.find(x=>x.id===cid),rows=[...body.querySelectorAll('tr')];
+ rows.forEach(r=>{const c=r.querySelectorAll('td'),pos=Number(c[0]?.textContent);if(!Number.isFinite(pos))return;let td=r.querySelector('td[data-qualification]');if(!td){td=document.createElement('td');td.dataset.qualification='1';r.appendChild(td)}td.innerHTML=`<b>${generalRule(pos,rows.length,comp?.name)}</b>`});
+}
+function refresh(force=false){
+ if(!window.S||!window.sb)return;
+ ensureSituation($('#pubStandings'),true);ensureSituation($('#standings'),false);
+ renderGeneral(true,force);if(!$('#adminView')?.classList.contains('hidden'))renderGeneral(false,force);
+}
+function bind(){['pubCompetition','pubSeries','competition','series','pubAssociation','ownerAssociation'].forEach(id=>{const el=$('#'+id);if(el&&!el.dataset.classFix){el.dataset.classFix='1';el.addEventListener('change',()=>{lastPub='';lastAdm='';setTimeout(()=>refresh(true),220)})}});['pubStandings','standings','pubGeneral'].forEach(id=>{const el=$('#'+id);if(el&&!el.dataset.classObs){el.dataset.classObs='1';new MutationObserver(()=>setTimeout(()=>refresh(false),60)).observe(el,{childList:true,subtree:true})}})}
+function init(){if(!window.S||!window.sb||!$('#publicView'))return setTimeout(init,100);bind();refresh(true);setInterval(()=>{bind();refresh(false)},900)}
+init();
+})();
