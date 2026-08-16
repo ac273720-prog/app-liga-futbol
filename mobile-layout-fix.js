@@ -23,6 +23,7 @@ css.textContent=`
   .filters{display:grid!important;grid-template-columns:1fr!important;width:100%!important;gap:8px!important}
   .filters label,.filters select{min-width:0!important;width:100%!important}
 
+  /* Tabla de serie: POS, EQUIPO, DG, PTS; clasificación debajo del club */
   .mobile-series-table{min-width:0!important;width:100%!important;table-layout:fixed!important}
   .mobile-series-table .mobile-stat-hide,.mobile-series-table .mobile-situation-hide{display:none!important}
   .mobile-series-table th,.mobile-series-table td{padding:9px 5px!important}
@@ -34,16 +35,18 @@ css.textContent=`
   #pubStandings td:nth-child(2),#standings td:nth-child(2){font-size:.86rem!important;line-height:1.12!important}
   #pubStandings td:nth-child(10),#standings td:nth-child(10){font-size:.96rem!important;font-weight:950!important}
 
-  .mobile-qualification{display:inline-flex!important;align-items:center!important;max-width:100%!important;margin-top:5px!important;padding:3px 6px!important;border-left:3px solid var(--accent,#ff1f59)!important;background:#f7f7f4!important;color:#071a22!important;font-size:.62rem!important;font-weight:900!important;line-height:1.05!important;white-space:normal!important;border-radius:2px!important}
+  .mobile-qualification{display:inline-flex!important;align-items:center!important;max-width:100%!important;margin-top:5px!important;padding:3px 6px!important;border-left:3px solid var(--accent,#ff1f59)!important;background:#f7f7f4!important;color:#071a22!important;font-size:.62rem!important;font-weight:900!important;line-height:1.08!important;white-space:normal!important;border-radius:2px!important}
 
-  #pubGeneralCard,#adminGeneralCard{padding:12px!important;margin-top:16px!important}
-  #pubGeneralCard .table,#adminGeneralCard .table{overflow:hidden!important}
-  #pubGeneralCard table,#adminGeneralCard table{min-width:0!important;width:100%!important;table-layout:fixed!important}
-  #pubGeneralCard th,#pubGeneralCard td,#adminGeneralCard th,#adminGeneralCard td{display:table-cell!important;padding:8px 5px!important;font-size:.72rem!important;white-space:normal!important}
-  #pubGeneralCard th:nth-child(1),#pubGeneralCard td:nth-child(1),#adminGeneralCard th:nth-child(1),#adminGeneralCard td:nth-child(1){width:34px!important}
-  #pubGeneralCard th:nth-child(3),#pubGeneralCard td:nth-child(3),#adminGeneralCard th:nth-child(3),#adminGeneralCard td:nth-child(3){width:48px!important}
-  #pubGeneralCard th:nth-child(4),#pubGeneralCard td:nth-child(4),#adminGeneralCard th:nth-child(4),#adminGeneralCard td:nth-child(4){width:104px!important}
-  #pubGeneralCard td[data-qualification] b,#adminGeneralCard td[data-qualification] b{min-width:0!important;padding:4px 5px!important;font-size:.62rem!important;line-height:1.06!important}
+  /* Tabla general móvil: POS, EQUIPO y PTS. Estado va debajo del equipo */
+  #pubGeneralCard,#adminGeneralCard{padding:12px!important;margin-top:16px!important;overflow:hidden!important}
+  #pubGeneralCard .table,#adminGeneralCard .table{overflow:hidden!important;width:100%!important}
+  .mobile-general-table{min-width:0!important;width:100%!important;table-layout:fixed!important}
+  .mobile-general-table th,.mobile-general-table td{padding:9px 5px!important;font-size:.76rem!important;white-space:normal!important}
+  .mobile-general-table th:nth-child(1),.mobile-general-table td:nth-child(1){width:36px!important}
+  .mobile-general-table th:nth-child(2),.mobile-general-table td:nth-child(2){width:auto!important;text-align:left!important;padding-left:8px!important}
+  .mobile-general-table th:nth-child(3),.mobile-general-table td:nth-child(3){width:58px!important;text-align:center!important}
+  .mobile-general-table th:nth-child(4),.mobile-general-table td:nth-child(4){display:none!important}
+  .mobile-general-table td:nth-child(3) b{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:44px!important;max-width:52px!important;padding:6px 5px!important;font-size:.95rem!important;line-height:1!important}
 
   .classification-summary{padding:12px!important}
   .classification-items{gap:5px!important}
@@ -57,17 +60,27 @@ document.head.appendChild(css);
 function shortStatus(text){
   const t=String(text||'').trim();
   if(!t||t==='—')return '';
-  if(t.includes('Copa Regional'))return '🏆 Copa';
-  if(t.includes('Liguilla'))return '⚔️ Liguilla';
-  if(t.includes('Campeón general'))return '🏅 Campeón general';
-  if(t.includes('Campeón de serie'))return '🏅 Campeón';
-  if(t.includes('Descenso'))return '⬇️ Descenso';
-  if(t.includes('Ascenso'))return '⬆️ Ascenso';
-  if(t.includes('Repechaje'))return '⚠️ Repechaje';
-  return t;
+  const out=[];
+  if(t.includes('Campeón general'))out.push('🏅 Campeón');
+  else if(t.includes('Campeón de serie'))out.push('🏅 Campeón');
+  if(t.includes('Copa Regional'))out.push('🏆 Copa');
+  if(t.includes('Liguilla'))out.push('⚔️ Liguilla');
+  if(t.includes('Descenso'))out.push('⬇️ Descenso');
+  if(t.includes('Ascenso'))out.push('⬆️ Ascenso');
+  if(t.includes('Repechaje'))out.push('⚠️ Repechaje');
+  return out.join(' · ')||t;
 }
 
-function fixTable(body){
+function addChip(team,status){
+  if(!team)return;
+  let chip=team.querySelector('.mobile-qualification');
+  const txt=shortStatus(status?.textContent);
+  if(!txt){chip?.remove();return}
+  if(!chip){chip=document.createElement('span');chip.className='mobile-qualification';team.appendChild(chip)}
+  chip.textContent=txt;
+}
+
+function fixSeries(body){
   if(!body)return;
   const table=body.closest('table');
   if(!table)return;
@@ -79,21 +92,27 @@ function fixTable(body){
   }
   [...body.querySelectorAll('tr')].forEach(row=>{
     [3,4,5,6,7,8].forEach(n=>row.children[n-1]?.classList.add('mobile-stat-hide'));
-    row.querySelector('td[data-qualification]')?.classList.add('mobile-situation-hide');
-    const team=row.children[1],status=row.querySelector('td[data-qualification]');
-    if(!team)return;
-    let chip=team.querySelector('.mobile-qualification');
-    const txt=shortStatus(status?.textContent);
-    if(!txt){chip?.remove();return}
-    if(!chip){chip=document.createElement('span');chip.className='mobile-qualification';team.appendChild(chip)}
-    chip.textContent=txt;
+    const status=row.querySelector('td[data-qualification]');
+    status?.classList.add('mobile-situation-hide');
+    addChip(row.children[1],status);
   });
 }
 
-function run(){fixTable($('#pubStandings'));fixTable($('#standings'))}
+function fixGeneral(body){
+  if(!body)return;
+  const table=body.closest('table');
+  if(!table)return;
+  table.classList.add('mobile-general-table');
+  [...body.querySelectorAll('tr')].forEach(row=>addChip(row.children[1],row.querySelector('td[data-qualification]')));
+}
+
+function run(){
+  fixSeries($('#pubStandings'));fixSeries($('#standings'));
+  fixGeneral($('#pubGeneral'));fixGeneral($('#adminGeneral'));
+}
 function init(){
   run();
-  ['pubStandings','standings'].forEach(id=>{
+  ['pubStandings','standings','pubGeneral','adminGeneral'].forEach(id=>{
     const el=$('#'+id);
     if(el&&!el.dataset.mobileFix){
       el.dataset.mobileFix='1';
