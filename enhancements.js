@@ -100,7 +100,8 @@
       if(pos===Math.max(1,total-2))extra='⚠️ Repechaje permanencia';
       if(pos>=Math.max(1,total-1))extra='⬇️ Descenso a Liga B';
     }else if(c.includes('liga b')){
-      if(pos===3)extra='⚠️ Repechaje ascenso';
+      if(pos===1||pos===2)extra='⬆️ Ascenso a Liga A';
+      else if(pos===3)extra='⚠️ Repechaje ascenso';
     }
     return [champion,extra].filter(Boolean).join(' · ')||'—';
   }
@@ -131,7 +132,7 @@
     if(!head.querySelector('[data-qualification]')){const th=document.createElement('th');th.dataset.qualification='1';th.textContent='Situación';head.appendChild(th)}
     const rows=[...body.querySelectorAll('tr')],comp=S.comps.find(x=>x.id===document.querySelector('#pubCompetition')?.value);
     rows.forEach(r=>{const cells=r.querySelectorAll('td');if(!cells.length)return;const pos=Number(cells[0].textContent);if(!Number.isFinite(pos))return;let td=r.querySelector('[data-qualification]');if(!td){td=document.createElement('td');td.dataset.qualification='1';r.appendChild(td)}td.innerHTML=`<b>${generalStatus(pos,rows.length,comp?.name)}</b>`});
-    const card=table.closest('.card');if(card){let note=card.querySelector('#qualificationNote');if(!note){note=document.createElement('p');note.id='qualificationNote';note.className='muted';const h=card.querySelector('h3');h?.after(note)}const c=norm(comp?.name);note.textContent=isAfacon()?(c.includes('liga a')?'Tabla general Afacon Liga A: el 1° figura como campeón general; los 2 últimos están en zona de descenso y el antepenúltimo en repechaje.':c.includes('liga b')?'Tabla general Afacon Liga B: el 1° figura como campeón general y el 3° está en zona de repechaje.':'El 1° figura como campeón general.'):'El 1° de la tabla general figura como campeón general.'}
+    const card=table.closest('.card');if(card){let note=card.querySelector('#qualificationNote');if(!note){note=document.createElement('p');note.id='qualificationNote';note.className='muted';const h=card.querySelector('h3');h?.after(note)}const c=norm(comp?.name);note.textContent=isAfacon()?(c.includes('liga a')?'Tabla general Afacon Liga A: el 1° figura como campeón general; los 2 últimos están en zona de descenso y el antepenúltimo en repechaje.':c.includes('liga b')?'Tabla general Afacon Liga B: el 1° figura como campeón general; los 2 primeros están en zona de ascenso a Liga A y el 3° en zona de repechaje.':'El 1° figura como campeón general.'):'El 1° de la tabla general figura como campeón general.'}
   }
 
   function ensureAdminGeneral(){
@@ -144,7 +145,7 @@
     ensureAdminGeneral();const body=document.querySelector('#adminGeneral');if(!body||!S.u)return;const cid=document.querySelector('#competition')?.value;if(!cid){body.innerHTML='<tr><td colspan="4">Sin datos disponibles.</td></tr>';return}
     const comp=S.comps.find(x=>x.id===cid),{data,error}=await sb.rpc('get_general_standings',{p_competition_id:cid});if(error){body.innerHTML=`<tr><td colspan="4">${error.message}</td></tr>`;return}
     const list=data||[];body.innerHTML=list.map(x=>`<tr><td>${x.pos}</td><td>${x.team_name}</td><td><b>${x.pts}</b></td><td><b>${generalStatus(Number(x.pos),list.length,comp?.name)}</b></td></tr>`).join('')||'<tr><td colspan="4">Sin datos disponibles.</td></tr>';
-    const note=document.querySelector('#adminQualificationNote');if(note){const c=norm(comp?.name);note.textContent=isAfacon()?(c.includes('liga a')?'Afacon Liga A: campeón general, descenso y repechaje según tabla general.':c.includes('liga b')?'Afacon Liga B: campeón general y repechaje según tabla general.':'Campeón general según tabla general.'):'El 1° de la tabla general figura como campeón general.'}
+    const note=document.querySelector('#adminQualificationNote');if(note){const c=norm(comp?.name);note.textContent=isAfacon()?(c.includes('liga a')?'Afacon Liga A: campeón general, descenso y repechaje según tabla general.':c.includes('liga b')?'Afacon Liga B: campeón general; los 2 primeros ascienden a Liga A y el 3° juega repechaje.':'Campeón general según tabla general.'):'El 1° de la tabla general figura como campeón general.'}
   }
   function scheduleAdminGeneral(){clearTimeout(generalTimer);generalTimer=setTimeout(loadAdminGeneral,120)}
 
