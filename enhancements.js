@@ -9,23 +9,18 @@
       s.innerHTML=`<div class="section-title"><div><h2>Mi club</h2><p class="muted">Personaliza la identidad de tu equipo.</p></div></div><div class="card" style="max-width:650px"><div id="clubLogoBox" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"></div><form id="clubLogoForm" style="display:grid;gap:12px;margin-top:16px"><label>Logo del club<input id="clubLogoFile" type="file" accept="image/jpeg,image/png,image/webp" required></label><button class="primary">Subir logo de mi club</button></form><div id="clubLogoMsg" class="msg"></div></div>`;
       main.appendChild(s);s.querySelector('#clubLogoForm').onsubmit=uploadClubLogo;
     }
-    if(!document.querySelector('#p-reports')){
-      const s=document.createElement('section');s.id='p-reports';s.className='panel hidden';
-      s.innerHTML=`<div class="section-title"><div><h2>Informes arbitrales</h2><p class="muted">Informes, turnos, observaciones y documentos enviados desde los partidos.</p></div><button id="refreshReports" class="ghost">Actualizar</button></div><div id="reportsList" style="display:grid;gap:12px;margin-top:14px"></div>`;
-      main.appendChild(s);s.querySelector('#refreshReports').onclick=loadReports;
-    }
   }
 
   function activateExtra(id){
     document.querySelectorAll('.panel').forEach(x=>x.classList.add('hidden'));
     document.querySelector('#p-'+id)?.classList.remove('hidden');
     document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.p===id));
-    if(id==='club')renderClubPanel();if(id==='reports')loadReports();
+    if(id==='club')renderClubPanel();
   }
 
   function patchNav(){
     const nav=document.querySelector('#nav');if(!nav||!S.u)return;
-    if(!nav.querySelector('[data-p="reports"]')){const b=document.createElement('button');b.dataset.p='reports';b.textContent='Informes arbitrales';b.onclick=()=>activateExtra('reports');nav.appendChild(b)}
+    nav.querySelector('[data-p="reports"]')?.remove();
     if(S.u.role==='team_admin'&&!nav.querySelector('[data-p="club"]')){const b=document.createElement('button');b.dataset.p='club';b.textContent='Mi club / Logo';b.onclick=()=>activateExtra('club');nav.appendChild(b)}
   }
 
@@ -45,14 +40,6 @@
       const {error:dbErr}=await sb.rpc('set_my_team_logo',{p_logo_url:url});if(dbErr)throw dbErr;const team=S.teams.find(t=>t.id===S.u.team_id);if(team)team.logo_url=url;
       msg.textContent='Logo actualizado correctamente.';msg.className='msg ok';renderClubPanel();e.target.reset();
     }catch(err){msg.textContent=err?.message||'No se pudo subir el logo.';msg.className='msg error'}
-  }
-
-  async function loadReports(){
-    const host=document.querySelector('#reportsList');if(!host)return;host.innerHTML='<div class="empty">Cargando informes...</div>';
-    try{await loadFixtures();const ids=S.matches.map(m=>m.id);if(!ids.length){host.innerHTML='<div class="empty">Aún no hay partidos con informes en esta asociación.</div>';return}
-      const {data,error}=await sb.from('arbitral_reports').select('id,match_id,report_text,document_url,created_at').in('match_id',ids).order('created_at',{ascending:false});if(error)throw error;if(!data?.length){host.innerHTML='<div class="empty">Aún no se han enviado informes arbitrales.</div>';return}host.innerHTML='';
-      for(const r of data){const m=S.matches.find(x=>x.id===r.match_id),card=document.createElement('div');card.className='card';const title=m?`${m.home?.name||'Local'} vs ${m.away?.name||'Visita'}`:'Partido';const meta=[m?.series?.name,m?.scheduled_at?new Date(m.scheduled_at).toLocaleDateString('es-CL'):null,new Date(r.created_at).toLocaleString('es-CL')].filter(Boolean).join(' · ');let doc='';if(r.document_url){const {data:signed}=await sb.storage.from('match-files').createSignedUrl(r.document_url,300);if(signed?.signedUrl)doc=`<a class="primary" style="display:inline-block;text-decoration:none;padding:8px 12px;border-radius:10px;margin-top:10px" href="${signed.signedUrl}" target="_blank" rel="noopener">Ver foto / PDF</a>`}card.innerHTML=`<h3 style="margin:0">${title}</h3><p class="muted">${meta}</p><pre style="white-space:pre-wrap;font:inherit;background:#c7d6ca;padding:12px;border-radius:10px">${r.report_text||'Sin observaciones escritas.'}</pre>${doc}`;host.appendChild(card)}
-    }catch(err){host.innerHTML=`<div class="msg error">${err?.message||'No se pudieron cargar los informes.'}</div>`}
   }
 
   function installAdminGate(){
