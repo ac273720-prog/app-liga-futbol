@@ -56,10 +56,16 @@ function ensureSituation(body,pub){
  rows.forEach(r=>{const cells=r.querySelectorAll('td'),pos=Number(cells[0]?.textContent);if(!Number.isFinite(pos))return;let td=r.querySelector('td[data-qualification]');if(!td){td=document.createElement('td');td.dataset.qualification='1';r.appendChild(td)}td.innerHTML=`<b>${seriesRule(pos,sn,cn)}</b>`});
  renderSummary(body,pub,sn,cn);
 }
+function cleanTeamText(cell){
+ if(!cell)return'';
+ const clone=cell.cloneNode(true);
+ clone.querySelectorAll('.mobile-qualification').forEach(x=>x.remove());
+ return clone.textContent.trim();
+}
 function renderSummary(body,pub,sn,cn){
  const table=body.closest('.table');if(!table)return;const id=pub?'pubQualificationSummary':'adminQualificationSummary';let box=$('#'+id);if(!box){box=document.createElement('div');box.id=id;box.className='card classification-summary';table.after(box)}
  const rows=[...body.querySelectorAll('tr')],items=[];
- rows.forEach(r=>{const c=r.querySelectorAll('td'),pos=Number(c[0]?.textContent),team=c[1]?.textContent?.trim();if(!Number.isFinite(pos)||!team)return;const q=seriesRule(pos,sn,cn);if(q!=='—')items.push(`<div class="classification-item"><b>${team}</b><span>${q}</span></div>`)});
+ rows.forEach(r=>{const c=r.querySelectorAll('td'),pos=Number(c[0]?.textContent),team=cleanTeamText(c[1]);if(!Number.isFinite(pos)||!team)return;const q=seriesRule(pos,sn,cn);if(q!=='—')items.push(`<div class="classification-item"><b>${team}</b><span>${q}</span></div>`)});
  let note=internal(sn)?'Serie interna: define campeón de serie y no entrega cupos regionales.':(isAfacon()&&norm(cn).includes('liga a')?'Afacon Liga A: 1° a Copa Regional; 2° y 3° a liguilla.':isAfacon()&&norm(cn).includes('liga b')?'Afacon Liga B: 1° y 2° a liguilla.':'1° a Copa Regional; del 2° al 5° en zona de liguilla.');
  box.innerHTML=`<h3>Clasificación actual</h3><p class="muted">${note}</p><div class="classification-items">${items.join('')||'<div class="empty">Aún no hay posiciones para clasificar.</div>'}</div>`;
 }
