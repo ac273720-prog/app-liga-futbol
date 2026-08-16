@@ -1,0 +1,30 @@
+name: Corregir clasificaciones
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-classification-scope.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Corregir alcance de variables de la app
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('classification-fix.js')
+          s=p.read_text()
+          s=s.replace('window.S','S').replace('window.sb','sb')
+          p.write_text(s)
+          PY
+      - name: Guardar corrección
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add classification-fix.js
+          git commit -m "Corregir restauración de tablas y clasificaciones"
+          git push
