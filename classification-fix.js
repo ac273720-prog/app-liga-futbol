@@ -2,7 +2,8 @@
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const isAfacon=()=>norm(S?.aName).includes('afacon');
-const internal=n=>{n=norm(n);return n.includes('serie primera')||n.includes('primera adulta')||n.includes('segunda serie')||n.includes('leyendas')||n.includes('infantil')||n.includes('juvenil')||n.includes('serie 50')||n.includes('senior 50')};
+const isPrecordillera=()=>norm(S?.aName).includes('precordillera');
+const internal=n=>{n=norm(n);return n.includes('serie primera')||n.includes('primera adulta')||n.includes('segunda serie')||n.includes('leyendas')||n.includes('infantil')||n.includes('juvenil')||n.includes('serie 50')||n.includes('senior 50')||(isPrecordillera()&&n.includes('mujer'))};
 const style=document.createElement('style');
 style.textContent=`
 .classification-summary{margin-top:14px!important;border-top:6px solid var(--accent,#ff1f59)!important}
@@ -56,12 +57,7 @@ function ensureSituation(body,pub){
  rows.forEach(r=>{const cells=r.querySelectorAll('td'),pos=Number(cells[0]?.textContent);if(!Number.isFinite(pos))return;let td=r.querySelector('td[data-qualification]');if(!td){td=document.createElement('td');td.dataset.qualification='1';r.appendChild(td)}td.innerHTML=`<b>${seriesRule(pos,sn,cn)}</b>`});
  renderSummary(body,pub,sn,cn);
 }
-function cleanTeamText(cell){
- if(!cell)return'';
- const clone=cell.cloneNode(true);
- clone.querySelectorAll('.mobile-qualification').forEach(x=>x.remove());
- return clone.textContent.trim();
-}
+function cleanTeamText(cell){if(!cell)return'';const clone=cell.cloneNode(true);clone.querySelectorAll('.mobile-qualification').forEach(x=>x.remove());return clone.textContent.trim()}
 function renderSummary(body,pub,sn,cn){
  const table=body.closest('.table');if(!table)return;const id=pub?'pubQualificationSummary':'adminQualificationSummary';let box=$('#'+id);if(!box){box=document.createElement('div');box.id=id;box.className='card classification-summary';table.after(box)}
  const rows=[...body.querySelectorAll('tr')],items=[];
@@ -70,39 +66,16 @@ function renderSummary(body,pub,sn,cn){
  box.innerHTML=`<h3>Clasificación actual</h3><p class="muted">${note}</p><div class="classification-items">${items.join('')||'<div class="empty">Aún no hay posiciones para clasificar.</div>'}</div>`;
 }
 function ensureGeneralCard(pub){
- if(pub){
-   const body=$('#pubGeneral');if(body){let card=body.closest('.card');if(card){card.id='pubGeneralCard';return card}}
-   const sec=$('#pub-tables');if(!sec)return null;const card=document.createElement('div');card.id='pubGeneralCard';card.className='card';card.innerHTML='<h3>Tabla general acumulada</h3><p class="muted">Clasificación general actual del campeonato.</p><div class="table"><table><thead><tr><th>POS</th><th>Equipo</th><th>PTS</th><th>Situación</th></tr></thead><tbody id="pubGeneral"></tbody></table></div>';sec.appendChild(card);return card;
- }
- const p=$('#p-tables');if(!p)return null;let card=$('#adminGeneralCard');if(!card){card=document.createElement('div');card.id='adminGeneralCard';card.className='card';card.innerHTML='<h3>Tabla general acumulada</h3><p class="muted">Clasificación general actual del campeonato.</p><div class="table"><table><thead><tr><th>POS</th><th>Equipo</th><th>PTS</th><th>Situación</th></tr></thead><tbody id="adminGeneral"></tbody></table></div>';p.appendChild(card)}return card;
+ if(pub){const body=$('#pubGeneral');if(body){let card=body.closest('.card');if(card){card.id='pubGeneralCard';return card}}const sec=$('#pub-tables');if(!sec)return null;const card=document.createElement('div');card.id='pubGeneralCard';card.className='card';card.innerHTML='<h3>Tabla general acumulada</h3><p class="muted">Clasificación general actual del campeonato.</p><div class="table"><table><thead><tr><th>POS</th><th>Equipo</th><th>PTS</th><th>Situación</th></tr></thead><tbody id="pubGeneral"></tbody></table></div>';sec.appendChild(card);return card}
+ const p=$('#p-tables');if(!p)return null;let card=$('#adminGeneralCard');if(!card){card=document.createElement('div');card.id='adminGeneralCard';card.className='card';card.innerHTML='<h3>Tabla general acumulada</h3><p class="muted">Clasificación general actual del campeonato.</p><div class="table"><table><thead><tr><th>POS</th><th>Equipo</th><th>PTS</th><th>Situación</th></tr></thead><tbody id="adminGeneral"></tbody></table></div>';p.appendChild(card)}return card
 }
 let lastPub='',lastAdm='',busyPub=false,busyAdm=false;
 async function renderGeneral(pub,force=false){
- if(!sb||!S)return;ensureGeneralCard(pub);
- const cid=$(pub?'#pubCompetition':'#competition')?.value;if(!cid)return;
- const key=`${S.a}|${cid}`;if(!force&&key===(pub?lastPub:lastAdm)){
-   decorateGeneral(pub);return;
- }
- if(pub?busyPub:busyAdm)return;pub?busyPub=true:busyAdm=true;
- try{
-   const {data,error}=await sb.rpc('get_general_standings',{p_competition_id:cid});
-   const body=$(pub?'#pubGeneral':'#adminGeneral');if(!body)return;
-   if(error){body.innerHTML=`<tr><td colspan="4">${error.message}</td></tr>`;return}
-   const comp=S.comps?.find(x=>x.id===cid),list=data||[];
-   body.innerHTML=list.map(x=>`<tr><td>${x.pos}</td><td>${String(x.team_name??'')}</td><td><b>${x.pts}</b></td><td data-qualification><b>${generalRule(Number(x.pos),list.length,comp?.name)}</b></td></tr>`).join('')||'<tr><td colspan="4">Sin datos disponibles.</td></tr>';
-   const head=body.closest('table')?.querySelector('thead tr');if(head){while(head.children.length<4){const th=document.createElement('th');th.textContent='Situación';th.dataset.qualification='1';head.appendChild(th)}head.lastElementChild.dataset.qualification='1';head.lastElementChild.textContent='Situación'}
-   if(pub)lastPub=key;else lastAdm=key;
- }finally{pub?busyPub=false:busyAdm=false}
+ if(!sb||!S)return;ensureGeneralCard(pub);const cid=$(pub?'#pubCompetition':'#competition')?.value;if(!cid)return;const key=`${S.a}|${cid}`;if(!force&&key===(pub?lastPub:lastAdm)){decorateGeneral(pub);return}if(pub?busyPub:busyAdm)return;pub?busyPub=true:busyAdm=true;
+ try{const {data,error}=await sb.rpc('get_general_standings',{p_competition_id:cid});const body=$(pub?'#pubGeneral':'#adminGeneral');if(!body)return;if(error){body.innerHTML=`<tr><td colspan="4">${error.message}</td></tr>`;return}const comp=S.comps?.find(x=>x.id===cid),list=data||[];body.innerHTML=list.map(x=>`<tr><td>${x.pos}</td><td>${String(x.team_name??'')}</td><td><b>${x.pts}</b></td><td data-qualification><b>${generalRule(Number(x.pos),list.length,comp?.name)}</b></td></tr>`).join('')||'<tr><td colspan="4">Sin datos disponibles.</td></tr>';const head=body.closest('table')?.querySelector('thead tr');if(head){while(head.children.length<4){const th=document.createElement('th');th.textContent='Situación';th.dataset.qualification='1';head.appendChild(th)}head.lastElementChild.dataset.qualification='1';head.lastElementChild.textContent='Situación'}if(pub)lastPub=key;else lastAdm=key}finally{pub?busyPub=false:busyAdm=false}
 }
-function decorateGeneral(pub){
- const body=$(pub?'#pubGeneral':'#adminGeneral');if(!body)return;const cid=$(pub?'#pubCompetition':'#competition')?.value,comp=S?.comps?.find(x=>x.id===cid),rows=[...body.querySelectorAll('tr')];
- rows.forEach(r=>{const c=r.querySelectorAll('td'),pos=Number(c[0]?.textContent);if(!Number.isFinite(pos))return;let td=r.querySelector('td[data-qualification]');if(!td){td=document.createElement('td');td.dataset.qualification='1';r.appendChild(td)}td.innerHTML=`<b>${generalRule(pos,rows.length,comp?.name)}</b>`});
-}
-function refresh(force=false){
- if(!S||!sb)return;
- ensureSituation($('#pubStandings'),true);ensureSituation($('#standings'),false);
- renderGeneral(true,force);if(!$('#adminView')?.classList.contains('hidden'))renderGeneral(false,force);
-}
+function decorateGeneral(pub){const body=$(pub?'#pubGeneral':'#adminGeneral');if(!body)return;const cid=$(pub?'#pubCompetition':'#competition')?.value,comp=S?.comps?.find(x=>x.id===cid),rows=[...body.querySelectorAll('tr')];rows.forEach(r=>{const c=r.querySelectorAll('td'),pos=Number(c[0]?.textContent);if(!Number.isFinite(pos))return;let td=r.querySelector('td[data-qualification]');if(!td){td=document.createElement('td');td.dataset.qualification='1';r.appendChild(td)}td.innerHTML=`<b>${generalRule(pos,rows.length,comp?.name)}</b>`})}
+function refresh(force=false){if(!S||!sb)return;ensureSituation($('#pubStandings'),true);ensureSituation($('#standings'),false);renderGeneral(true,force);if(!$('#adminView')?.classList.contains('hidden'))renderGeneral(false,force)}
 function bind(){['pubCompetition','pubSeries','competition','series','pubAssociation','ownerAssociation'].forEach(id=>{const el=$('#'+id);if(el&&!el.dataset.classFix){el.dataset.classFix='1';el.addEventListener('change',()=>{lastPub='';lastAdm='';setTimeout(()=>refresh(true),220)})}});['pubStandings','standings','pubGeneral'].forEach(id=>{const el=$('#'+id);if(el&&!el.dataset.classObs){el.dataset.classObs='1';new MutationObserver(()=>setTimeout(()=>refresh(false),60)).observe(el,{childList:true,subtree:true})}})}
 function init(){if(!S||!sb||!$('#publicView'))return setTimeout(init,100);bind();refresh(true);setInterval(()=>{bind();refresh(false)},900)}
 init();
