@@ -2,7 +2,7 @@
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const isAfacon=()=>norm(S?.aName).includes('afacon');
-const internal=n=>{n=norm(n);return n.includes('serie primera')||n.includes('primera adulta')||n.includes('segunda serie')};
+const internal=n=>{n=norm(n);return n.includes('serie primera')||n.includes('primera adulta')||n.includes('segunda serie')||n.includes('leyendas')||n.includes('infantil')||n.includes('juvenil')||n.includes('serie 50')||n.includes('senior 50')};
 const style=document.createElement('style');
 style.textContent=`
 .classification-summary{margin-top:14px!important;border-top:6px solid var(--accent,#ff1f59)!important}
