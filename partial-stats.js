@@ -21,12 +21,13 @@
   const fix=()=>{
     ['#pubStandings','#standings'].forEach(sel=>document.querySelectorAll(sel+' td').forEach(td=>{if(td.textContent.trim()==='null')td.textContent='—'}));
     fixAfacom();
-    const main=document.querySelector('#publicView .public-main');
-    if(!main||typeof S==='undefined')return;
-    const n=norm(S.aName),pre=n.includes('precordillera');
+    const tables=document.querySelector('#pub-tables');
+    if(!tables||typeof S==='undefined')return;
+    const pre=norm(S.aName).includes('precordillera');
     let box=document.querySelector('#associationStatusNotice');
     if(!pre){if(box)box.remove();lastNotice='';return}
-    if(!box){box=document.createElement('div');box.id='associationStatusNotice';box.className='card';box.style.cssText='margin:0 0 18px;border-left:7px solid var(--accent,#ff1f59);';const tabs=main.querySelector('.tabs');tabs?main.insertBefore(box,tabs):main.prepend(box)}
+    if(!box){box=document.createElement('div');box.id='associationStatusNotice';box.className='card';box.style.cssText='margin:0 0 18px;border-left:7px solid var(--accent,#ff1f59);';tables.prepend(box)}
+    if(box.parentElement!==tables)tables.prepend(box);
     const html='<div style="font-size:.72rem;font-weight:950;letter-spacing:.12em">🏆 PRECORDILLERA 2026</div><h2 style="margin:7px 0">Temporada próxima a comenzar</h2><p style="margin:0 0 7px">El campeonato oficial de Precordillera aún no inicia.</p><p style="margin:0"><b>Este sábado comienza la Copa Regional · Serie 35.</b></p><p class="muted" style="margin:7px 0 0">Programación, resultados y tablas se actualizarán en Linares Score.</p>';
     const key='pre|'+html;
     if(lastNotice!==key||box.innerHTML!==html){box.innerHTML=html;lastNotice=key}
