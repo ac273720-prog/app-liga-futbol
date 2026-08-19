@@ -11,13 +11,13 @@
   "lang": "es-CL",
   "icons": [
     {
-      "src": "/app-icon.svg?v=2",
+      "src": "/app-icon.svg?v=3",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/app-icon.svg?v=2",
+      "src": "/app-icon.svg?v=3",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable"
