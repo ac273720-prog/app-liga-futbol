@@ -27,8 +27,8 @@
   }
   function initPwa(){
     addHeadLink('manifest','/manifest.webmanifest');
-    addHeadLink('icon','/app-icon.svg',{type:'image/svg+xml'});
-    addHeadLink('apple-touch-icon','/app-icon.svg');
+    addHeadLink('icon','/app-icon.svg?v=3',{type:'image/svg+xml'});
+    addHeadLink('apple-touch-icon','/app-icon.svg?v=3');
     addMeta('theme-color','#075f33');addMeta('mobile-web-app-capable','yes');addMeta('apple-mobile-web-app-capable','yes');addMeta('apple-mobile-web-app-status-bar-style','black-translucent');addMeta('apple-mobile-web-app-title','Linares Score');
     if('serviceWorker'in navigator)navigator.serviceWorker.register('/service-worker.js').catch(()=>{});
     window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;pwaInstallButton()});
