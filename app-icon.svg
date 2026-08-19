@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#041109"/>
+      <stop offset="1" stop-color="#0b9950"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#g)"/>
+  <rect x="28" y="28" width="456" height="456" rx="92" fill="none" stroke="#d2ad3a" stroke-width="18"/>
+  <circle cx="256" cy="214" r="116" fill="#ffffff" opacity="0.96"/>
+  <circle cx="256" cy="214" r="90" fill="#075f33"/>
+  <polygon points="256,150 292,177 278,220 234,220 220,177" fill="#d2ad3a"/>
+  <path d="M256 124l-32 27-40-2-19 36 15 38-12 39 31 27 40-5 35 20 34-22 41 4 29-29-14-38 13-39-21-34-40 1z" fill="none" stroke="#ffffff" stroke-width="12" opacity="0.9"/>
+  <text x="256" y="393" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="86" font-weight="900" fill="#ffffff">LS</text>
+  <text x="256" y="442" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="32" font-weight="800" fill="#d2ad3a">Linares Score</text>
+</svg>
