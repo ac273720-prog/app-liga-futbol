@@ -1,0 +1,26 @@
+{
+  "name": "Linares Score Futbol Amateur",
+  "short_name": "Linares Score",
+  "description": "Resultados, tablas, programación y Copa Regional del fútbol amateur de Linares y el Maule.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#07150e",
+  "theme_color": "#075f33",
+  "lang": "es-CL",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
