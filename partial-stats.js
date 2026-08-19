@@ -3,23 +3,44 @@
   const selectedAssociationName=()=>{
     const pub=document.querySelector('#pubAssociation');
     if(pub&&pub.value)return pub.options[pub.selectedIndex]?.textContent||'';
-    const own=document.querySelector('#ownerAssociation');
-    if(own&&own.value)return own.options[own.selectedIndex]?.textContent||'';
-    return '';
+    return S?.aName||'';
   };
-  const isSelectedPrecordillera=()=>norm(selectedAssociationName()).includes('precordillera');
-  const noticeHtml='<div style="font-size:.72rem;font-weight:950;letter-spacing:.12em">⚽ PRECORDILLERA 2026</div><h2 style="margin:7px 0">Pronta reanudación del fútbol</h2><p style="margin:0 0 7px">La actividad de la Asociación Precordillera está próxima a reanudarse.</p><p style="margin:0"><b>🏆 Este sábado comienza la Copa Regional en Serie 35 y Serie 50.</b></p><p class="muted" style="margin:7px 0 0">Programación, resultados y tablas se actualizarán en Linares Score.</p>';
+  const isPrecordillera=()=>norm(selectedAssociationName()).includes('precordillera');
+  const isFenfur=()=>document.querySelector('#pubAssociation')?.value==='__fenfur__';
+  const noticeHtml='<div style="font-size:.72rem;font-weight:950;letter-spacing:.12em">⚽ PRECORDILLERA 2026</div><h2 style="margin:7px 0">Pronta reanudación del fútbol</h2><p style="margin:0 0 7px">La actividad de la Asociación Precordillera está próxima a reanudarse.</p><p style="margin:0"><b>🏆 Este sábado se juega Copa Regional FENFUR en Serie 35 y Serie 50.</b></p><p class="muted" style="margin:7px 0 0">Programación, resultados y tablas se actualizarán en Linares Score.</p>';
   function notice(){
-    const old=document.querySelector('#associationStatusNotice');
-    if(!isSelectedPrecordillera()){if(old)old.remove();return}
-    const tables=document.querySelector('#pub-tables');
-    if(!tables)return;
-    let box=old;
-    if(!box){box=document.createElement('div');box.id='associationStatusNotice';box.className='card';box.style.cssText='margin:0 0 18px;border-left:7px solid var(--accent,#ff1f59);'}
-    if(box.parentElement!==tables)tables.prepend(box);
+    let box=document.querySelector('#associationStatusNotice');
+    if(!isPrecordillera()||isFenfur()){
+      if(box)box.remove();
+      return;
+    }
+    const main=document.querySelector('#publicView .public-main');
+    if(!main)return;
+    if(!box){
+      box=document.createElement('div');
+      box.id='associationStatusNotice';
+      box.className='card';
+      box.style.cssText='margin:0 0 18px;border-left:7px solid var(--accent,#ff1f59);';
+    }
+    const tabs=main.querySelector('.tabs');
+    if(tabs){
+      if(box.parentElement!==main||box.nextElementSibling!==tabs)main.insertBefore(box,tabs);
+    }else if(box.parentElement!==main){main.prepend(box)}
     if(box.innerHTML!==noticeHtml)box.innerHTML=noticeHtml;
   }
-  ['pubAssociation','ownerAssociation'].forEach(id=>document.querySelector('#'+id)?.addEventListener('change',()=>{document.querySelector('#associationStatusNotice')?.remove();setTimeout(notice,150)}));
-  const init=()=>{notice();setInterval(notice,700);if(!document.querySelector('script[data-fenfur]')){const s=document.createElement('script');s.src='fenfur-cup.js?v=1';s.dataset.fenfur='1';document.body.appendChild(s)}};
+  function bind(){
+    const sel=document.querySelector('#pubAssociation');
+    if(sel&&!sel.dataset.preNoticeBound){
+      sel.dataset.preNoticeBound='1';
+      sel.addEventListener('change',()=>{document.querySelector('#associationStatusNotice')?.remove();setTimeout(notice,180)});
+    }
+  }
+  const init=()=>{
+    bind();notice();
+    setInterval(()=>{bind();notice()},500);
+    if(!document.querySelector('script[data-fenfur]')){
+      const s=document.createElement('script');s.src='fenfur-cup.js?v=2';s.dataset.fenfur='1';document.body.appendChild(s)
+    }
+  };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
