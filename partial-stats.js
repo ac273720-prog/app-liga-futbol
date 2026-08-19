@@ -20,6 +20,6 @@
     if(box.innerHTML!==noticeHtml)box.innerHTML=noticeHtml;
   }
   ['pubAssociation','ownerAssociation'].forEach(id=>document.querySelector('#'+id)?.addEventListener('change',()=>{document.querySelector('#associationStatusNotice')?.remove();setTimeout(notice,150)}));
-  const init=()=>{notice();setInterval(notice,700)};
+  const init=()=>{notice();setInterval(notice,700);if(!document.querySelector('script[data-fenfur]')){const s=document.createElement('script');s.src='fenfur-cup.js?v=1';s.dataset.fenfur='1';document.body.appendChild(s)}};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
