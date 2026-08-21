@@ -1,9 +1,20 @@
 (()=>{
 const LIVE_URL='';
 const EVENT_END='2026-08-22T03:59:59Z';
-const now=Date.now();
-if(now>Date.parse(EVENT_END))return;
-const css=`
+
+function hideEmptySeries(){
+  document.querySelectorAll('#pubFixtures *,#fixtures *').forEach(el=>{
+    if(el.children.length===0 && el.textContent.trim().toLowerCase()==='sin series'){
+      el.style.display='none';
+    }
+  });
+}
+
+function renderAlert(){
+  if(Date.now()>Date.parse(EVENT_END))return;
+  const host=document.querySelector('#publicView .public-main');
+  if(!host||document.querySelector('#achibuenoToday'))return;
+  const css=`
 #achibuenoToday{margin:0 0 18px;overflow:hidden;padding:0;border:1px solid #87151c;border-top:5px solid #d8b04b;background:linear-gradient(135deg,#190608,#4a0c12 58%,#23070a);color:#fff;box-shadow:0 14px 30px rgba(43,3,7,.25)}
 .achibueno-inner{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;padding:20px 22px}
 .achibueno-kicker{font-size:.72rem;font-weight:950;letter-spacing:.16em;color:#e2bd57}
@@ -16,10 +27,12 @@ const css=`
 .achibueno-live{display:inline-block;margin-top:10px;padding:10px 14px;border-radius:10px;background:#e31b23;color:#fff;text-decoration:none;font-weight:950;box-shadow:0 6px 16px rgba(0,0,0,.25)}
 @media(max-width:720px){.achibueno-inner{grid-template-columns:1fr;padding:17px}.achibueno-title{font-size:1.28rem}.achibueno-stream{min-width:0;text-align:left}}
 `;
-const style=document.createElement('style');style.textContent=css;document.head.appendChild(style);
-function render(){
-  const host=document.querySelector('#publicView .public-main');
-  if(!host||document.querySelector('#achibuenoToday'))return;
+  if(!document.querySelector('#achibuenoAlertStyle')){
+    const style=document.createElement('style');
+    style.id='achibuenoAlertStyle';
+    style.textContent=css;
+    document.head.appendChild(style);
+  }
   const box=document.createElement('section');
   box.id='achibuenoToday';box.className='card';
   box.setAttribute('aria-label','Partido destacado de hoy');
@@ -27,6 +40,12 @@ function render(){
   const tabs=host.querySelector('.tabs');
   if(tabs)host.insertBefore(box,tabs);else host.prepend(box);
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render);else render();
-new MutationObserver(render).observe(document.body,{childList:true,subtree:true});
+
+function run(){
+  hideEmptySeries();
+  renderAlert();
+}
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+new MutationObserver(()=>setTimeout(run,20)).observe(document.body,{childList:true,subtree:true});
 })();
