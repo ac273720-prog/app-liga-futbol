@@ -1,5 +1,7 @@
 (()=>{
 let installPrompt=null;
+let fenfurRows=null;
+let fenfurLoading=false;
 
 function setupPwa(){
   if(!document.querySelector('link[rel="manifest"]')){
@@ -89,11 +91,55 @@ function removeFinishedMatchAlert(){
   document.querySelector('#achibuenoAlertStyle')?.remove();
 }
 
+function cleanName(s){
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+}
+
+async function ensureFenfurRows(){
+  if(fenfurRows||fenfurLoading||typeof sb==='undefined')return;
+  fenfurLoading=true;
+  try{
+    const {data,error}=await sb.from('fenfur_ties').select('id,category,home_team,away_team,first_leg_home_goals,first_leg_away_goals,second_leg_home_goals,second_leg_away_goals,status');
+    if(!error)fenfurRows=data||[];
+  }catch(_){ }
+  fenfurLoading=false;
+}
+
+async function showFenfurScores(){
+  const cards=[...document.querySelectorAll('#fenfurGrid .fenfur-tie')];
+  if(!cards.length)return;
+  await ensureFenfurRows();
+  if(!fenfurRows)return;
+  for(const card of cards){
+    const teams=[...card.querySelectorAll('.fenfur-team span')].map(x=>cleanName(x.childNodes[0]?.textContent||x.textContent));
+    if(teams.length<2)continue;
+    const row=fenfurRows.find(r=>cleanName(r.home_team)===teams[0]&&cleanName(r.away_team)===teams[1]);
+    if(!row)continue;
+    let box=card.querySelector('[data-fenfur-score]');
+    const parts=[];
+    if(row.first_leg_home_goals!==null&&row.first_leg_home_goals!==undefined&&row.first_leg_away_goals!==null&&row.first_leg_away_goals!==undefined){
+      parts.push(`IDA · ${row.home_team} ${row.first_leg_home_goals}-${row.first_leg_away_goals} ${row.away_team}`);
+    }
+    if(row.second_leg_home_goals!==null&&row.second_leg_home_goals!==undefined&&row.second_leg_away_goals!==null&&row.second_leg_away_goals!==undefined){
+      parts.push(`VUELTA · ${row.home_team} ${row.second_leg_home_goals}-${row.second_leg_away_goals} ${row.away_team}`);
+    }
+    if(!parts.length){box?.remove();continue;}
+    if(!box){
+      box=document.createElement('div');
+      box.dataset.fenfurScore='1';
+      box.style.cssText='margin-top:10px;padding:10px 11px;border-radius:10px;background:#5a1117;border:1px solid #d5ae42;color:#fff;font-weight:950;text-align:center';
+      card.appendChild(box);
+    }
+    box.innerHTML=`🏁 ${parts.join('<br>')}`;
+  }
+}
+
 function run(){
   removeFinishedMatchAlert();
   hideEmptySeries();
   ensureInstallButton();
+  showFenfurScores();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{setupPwa();run()});else{setupPwa();run()}
-new MutationObserver(()=>setTimeout(run,20)).observe(document.body,{childList:true,subtree:true});
+new MutationObserver(()=>setTimeout(run,30)).observe(document.body,{childList:true,subtree:true});
 })();
