@@ -8,7 +8,7 @@ function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/
 function isLinaresTie(x){return norm(x.home_association)==='linares'||norm(x.away_association)==='linares'}
 const officialFirstLeg=[
  {cat:'Senior 35',a:'ocho y media',b:'achibueno',date:'2026-08-21',time:'20:30',venue:'Cancha San Antonio de Talca',scoreA:6,scoreB:3},
- {cat:'Senior 35',a:'san alfonso',b:'robleria',date:'2026-08-22',time:'15:20',venue:'Cancha El Molino, Teno'},
+ {cat:'Senior 35',a:'san alfonso',b:'robleria',date:'2026-08-22',time:'15:20',venue:'Cancha El Molino, Teno',scoreA:0,scoreB:0},
  {cat:'Senior 35',a:'los mogotes',b:'independiente de cumpeo',date:'2026-08-23',time:'15:00',venue:'Cancha Santa Gemita, Yerbas Buenas'},
  {cat:'Senior 50',a:'union achibueno',b:'ferroviario camarico',date:'2026-08-23',time:'15:00',venue:'Cancha de Roblería, Linares'},
  {cat:'Senior 50',a:'aldea campesina',b:'manantiales',time:'18:00',venue:'Cancha Santa Rosa de Pelarco'},
