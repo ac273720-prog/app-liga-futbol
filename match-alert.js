@@ -54,19 +54,18 @@ function ensureInstallButton(){
     host.appendChild(btn);
   }
   btn.dataset.pwaReady='1';
-  if(isStandalone()){
-    btn.style.display='none';
-    return;
-  }
   btn.style.display='';
   btn.onclick=async e=>{
     e.preventDefault();
+    if(isStandalone()){
+      alert('Linares Score ya está instalada en este dispositivo.');
+      return;
+    }
     if(installPrompt){
       const p=installPrompt;
       installPrompt=null;
       await p.prompt();
       try{await p.userChoice}catch(_){ }
-      if(isStandalone())btn.style.display='none';
       return;
     }
     if(isIos()){
@@ -83,7 +82,7 @@ window.addEventListener('beforeinstallprompt',e=>{
 });
 window.addEventListener('appinstalled',()=>{
   installPrompt=null;
-  findInstallButtons().forEach(btn=>btn.style.display='none');
+  ensureInstallButton();
 });
 
 function hideEmptySeries(){
