@@ -32,11 +32,17 @@ function isStandalone(){
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
 }
 function isIos(){return /iphone|ipad|ipod/i.test(navigator.userAgent)}
-function findInstallButton(){
-  return [...document.querySelectorAll('button,a')].find(el=>/instalar\s*(la\s*)?app|descargar\s*(la\s*)?app/i.test((el.textContent||'').trim()));
+function findInstallButtons(){
+  return [...document.querySelectorAll('button,a')].filter(el=>/instalar\s*(la\s*)?app|descargar\s*(la\s*)?app/i.test((el.textContent||'').trim()));
 }
+function findInstallButton(){return findInstallButtons()[0]||null}
 function ensureInstallButton(){
-  let btn=findInstallButton();
+  let buttons=findInstallButtons();
+  if(buttons.length>1){
+    buttons.slice(1).forEach(el=>el.remove());
+    buttons=buttons.slice(0,1);
+  }
+  let btn=buttons[0]||null;
   if(!btn){
     const host=document.querySelector('#publicView .top-actions');
     if(!host)return;
@@ -52,6 +58,7 @@ function ensureInstallButton(){
     btn.style.display='none';
     return;
   }
+  btn.style.display='';
   btn.onclick=async e=>{
     e.preventDefault();
     if(installPrompt){
@@ -76,8 +83,7 @@ window.addEventListener('beforeinstallprompt',e=>{
 });
 window.addEventListener('appinstalled',()=>{
   installPrompt=null;
-  const btn=findInstallButton();
-  if(btn)btn.style.display='none';
+  findInstallButtons().forEach(btn=>btn.style.display='none');
 });
 
 function hideEmptySeries(){
