@@ -1,5 +1,5 @@
 (()=>{
-const LIVE_URL='';
+const LIVE_URL='https://www.youtube.com/live/J1KMr6yV1aI?si=RQJad0IABjG_wvoi';
 const EVENT_END='2026-08-22T03:59:59Z';
 
 function hideEmptySeries(){
