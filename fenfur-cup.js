@@ -13,7 +13,7 @@ const officialFirstLeg=[
  {cat:'Senior 50',a:'union achibueno',b:'ferroviario camarico',date:'2026-08-23',time:'15:00',venue:'Cancha de Roblería, Linares'},
  {cat:'Senior 50',a:'aldea campesina',b:'manantiales',time:'18:00',venue:'Cancha Santa Rosa de Pelarco'},
  {cat:'Senior 35',a:'peñasco',b:'bramadero',time:'20:00',venue:'Cancha Nacional Municipal, Linares'},
- {cat:'Senior 50',a:'huracan de melozal',b:'mariscadero',time:'16:00',venue:'Cancha Unión Melozal, Linares'}
+ {cat:'Senior 50',a:'huracan de melozal',b:'mariscadero',time:'16:00',venue:'Cancha Unión Melozal, Linares',scoreA:3,scoreB:0}
 ];
 function officialFor(x){const h=norm(x.home_team),a=norm(x.away_team);return officialFirstLeg.find(o=>o.cat===x.category&&((h.includes(norm(o.a))&&a.includes(norm(o.b)))||(h.includes(norm(o.b))&&a.includes(norm(o.a)))))}
 function scorePair(x,o){if(!o||o.scoreA==null||o.scoreB==null)return [null,null];const h=norm(x.home_team),firstIsA=h.includes(norm(o.a));return firstIsA?[o.scoreA,o.scoreB]:[o.scoreB,o.scoreA]}
