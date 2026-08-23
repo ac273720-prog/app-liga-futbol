@@ -19,7 +19,7 @@ function selectedAssociation(){const sel=document.querySelector('#pubAssociation
 function prettyAssociation(name){const n=norm(name);if(n.includes('fenfur'))return '🏆 FENFUR · COPA REGIONAL';if(n.includes('victor zavala'))return 'VÍCTOR ZAVALA · LINARES';if(n.includes('precordillera'))return 'PRECORDILLERA · LINARES';if(n.includes('afal'))return 'AFAL · LINARES';if(n.includes('afacon'))return 'AFACON · COLBÚN';if(n.includes('yerbas buenas'))return 'YERBAS BUENAS';return String(name||'').replace(/^asociaci[oó]n\s+/i,'').replace(/^soc\.\s*/i,'').trim().toUpperCase()}
 function polishAssociationSelector(){
   if(!document.querySelector('#associationSelectorPolish')){const st=document.createElement('style');st.id='associationSelectorPolish';st.textContent=`.top-choice{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif!important;font-size:.68rem!important;font-weight:800!important;letter-spacing:.12em!important;text-transform:uppercase!important;color:#dce8df!important}.top-choice select{min-width:245px!important;min-height:42px!important;padding:9px 38px 9px 13px!important;border:1px solid rgba(255,255,255,.22)!important;border-radius:10px!important;background:#102f20!important;color:#f7fbf8!important;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif!important;font-size:.83rem!important;font-weight:800!important;letter-spacing:.025em!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 4px 12px rgba(0,0,0,.16)!important}.top-choice select:focus{outline:2px solid rgba(210,173,58,.55)!important;outline-offset:2px!important;border-color:#d2ad3a!important}.top-choice select option{background:#102f20!important;color:#fff!important;font-weight:700!important}@media(max-width:560px){.top-choice select{min-width:0!important;width:100%!important;font-size:.78rem!important}}`;document.head.appendChild(st)}
-  ['#pubAssociation','#ownerAssociation'].forEach(id=>{const sel=document.querySelector(id);if(!sel)return;[...sel.options].forEach(o=>{if(!o.dataset.originalLabel)o.dataset.originalLabel=o.textContent;o.textContent=prettyAssociation(o.dataset.originalLabel)})})
+  ['#pubAssociation','#ownerAssociation'].forEach(id=>{const sel=document.querySelector(id);if(!sel)return;[...sel.options].forEach(o=>{if(!o.dataset.originalLabel)o.dataset.originalLabel=o.textContent;const label=prettyAssociation(o.dataset.originalLabel);if(o.textContent!==label)o.textContent=label})})
 }
 function cleanFixtureDisplay(){
   const assoc=selectedAssociation();
@@ -27,15 +27,10 @@ function cleanFixtureDisplay(){
   const zavala=assoc.includes('zavala');
   document.querySelectorAll('#pubFixtures .fixture').forEach(card=>{
     card.querySelectorAll('.series-row').forEach(row=>{row.style.display=afacon?'none':''});
-    card.querySelectorAll('.empty').forEach(el=>{
-      const t=norm(el.textContent);
-      if((afacon||zavala)&&t==='sin series')el.style.display='none';else if(!afacon&&!zavala&&t==='sin series')el.style.display='';
-    });
+    card.querySelectorAll('.empty').forEach(el=>{const t=norm(el.textContent);if((afacon||zavala)&&t==='sin series')el.style.display='none';else if(!afacon&&!zavala&&t==='sin series')el.style.display=''});
   });
-  if(afacon){
-    const sub=document.querySelector('#pub-fixtures .section-title .muted');
-    if(sub)sub.textContent='Cruces programados entre clubes';
-  }
+  const sub=document.querySelector('#pub-fixtures .section-title .muted');
+  if(sub)sub.textContent=afacon?'Cruces programados entre clubes':'Enfrentamientos entre clubes y resultados por serie';
 }
 function removeFinishedMatchAlert(){document.querySelector('#achibuenoToday')?.remove();document.querySelector('#achibuenoAlertStyle')?.remove()}
 function cleanName(s){return norm(s)}
@@ -43,5 +38,5 @@ async function ensureFenfurRows(){if(fenfurRows||fenfurLoading||typeof sb==='und
 async function showFenfurScores(){const cards=[...document.querySelectorAll('#fenfurGrid .fenfur-tie')];if(!cards.length)return;await ensureFenfurRows();if(!fenfurRows)return;for(const card of cards){const teams=[...card.querySelectorAll('.fenfur-team span')].map(x=>cleanName(x.childNodes[0]?.textContent||x.textContent));if(teams.length<2)continue;const row=fenfurRows.find(r=>cleanName(r.home_team)===teams[0]&&cleanName(r.away_team)===teams[1]);if(!row)continue;let box=card.querySelector('[data-fenfur-score]');const parts=[];if(row.first_leg_home_goals!==null&&row.first_leg_home_goals!==undefined&&row.first_leg_away_goals!==null&&row.first_leg_away_goals!==undefined)parts.push(`IDA · ${row.home_team} ${row.first_leg_home_goals}-${row.first_leg_away_goals} ${row.away_team}`);if(row.second_leg_home_goals!==null&&row.second_leg_home_goals!==undefined&&row.second_leg_away_goals!==null&&row.second_leg_away_goals!==undefined)parts.push(`VUELTA · ${row.home_team} ${row.second_leg_home_goals}-${row.second_leg_away_goals} ${row.away_team}`);if(!parts.length){box?.remove();continue}if(!box){box=document.createElement('div');box.dataset.fenfurScore='1';box.style.cssText='margin-top:10px;padding:10px 11px;border-radius:10px;background:#5a1117;border:1px solid #d5ae42;color:#fff;font-weight:950;text-align:center';card.appendChild(box)}box.innerHTML=`🏁 ${parts.join('<br>')}`}}
 function run(){removeFinishedMatchAlert();polishAssociationSelector();cleanFixtureDisplay();ensureInstallButton();showFenfurScores()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{setupPwa();run()});else{setupPwa();run()}
-new MutationObserver(()=>setTimeout(run,30)).observe(document.body,{childList:true,subtree:true});
+let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;setTimeout(()=>{pending=false;run()},80)}).observe(document.body,{childList:true,subtree:true});
 })();
