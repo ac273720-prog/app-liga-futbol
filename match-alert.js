@@ -32,13 +32,15 @@ function polishAssociationSelector(){
 function cleanFixtureDisplay(){
   const assoc=selectedAssociation();
   const afacon=assoc.includes('afacon')||assoc.includes('afacom');
+  const linares=assoc==='asociacion linares'||assoc==='linares';
   const zavala=assoc.includes('zavala');
+  const onlyCrossings=afacon||linares;
   document.querySelectorAll('#pubFixtures .fixture').forEach(card=>{
-    card.querySelectorAll('.series-row').forEach(row=>{row.style.display=afacon?'none':''});
-    card.querySelectorAll('.empty').forEach(el=>{const t=norm(el.textContent);if((afacon||zavala)&&t==='sin series')el.style.display='none';else if(!afacon&&!zavala&&t==='sin series')el.style.display=''});
+    card.querySelectorAll('.series-row').forEach(row=>{row.style.display=onlyCrossings?'none':''});
+    card.querySelectorAll('.empty').forEach(el=>{const t=norm(el.textContent);if((onlyCrossings||zavala)&&t==='sin series')el.style.display='none';else if(!onlyCrossings&&!zavala&&t==='sin series')el.style.display=''});
   });
   const sub=document.querySelector('#pub-fixtures .section-title .muted');
-  if(sub)sub.textContent=afacon?'Cruces programados entre clubes':'Enfrentamientos entre clubes y resultados por serie';
+  if(sub)sub.textContent=onlyCrossings?'Cruces programados entre clubes':'Enfrentamientos entre clubes y resultados por serie';
 }
 function removeFinishedMatchAlert(){document.querySelector('#achibuenoToday')?.remove();document.querySelector('#achibuenoAlertStyle')?.remove()}
 function cleanName(s){return norm(s)}
