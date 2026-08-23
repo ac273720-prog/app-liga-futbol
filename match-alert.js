@@ -2,6 +2,7 @@
 let installPrompt=null;
 let fenfurRows=null;
 let fenfurLoading=false;
+const LINARES_ASSOCIATION_ID='f8057c00-36f9-4974-abca-5cc728300a74';
 
 function setupPwa(){
   if(!document.querySelector('link[rel="manifest"]')){const link=document.createElement('link');link.rel='manifest';link.href='/manifest.webmanifest?v=4';document.head.appendChild(link)}
@@ -16,6 +17,7 @@ function ensureInstallButton(){let buttons=findInstallButtons();if(buttons.lengt
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;ensureInstallButton()});window.addEventListener('appinstalled',()=>{installPrompt=null;ensureInstallButton()});
 function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
 function selectedAssociation(){const sel=document.querySelector('#pubAssociation');return norm(sel?.options?.[sel.selectedIndex]?.textContent||'')}
+function selectedAssociationId(){return document.querySelector('#pubAssociation')?.value||''}
 function prettyAssociation(name){const n=norm(name);if(n==='linares'||n==='asociacion linares'||n==='soc linares')return 'ASOCIACIÓN LINARES';if(n.includes('fenfur'))return '🏆 FENFUR · COPA REGIONAL';if(n.includes('victor zavala'))return 'VÍCTOR ZAVALA · LINARES';if(n.includes('precordillera'))return 'PRECORDILLERA · LINARES';if(n.includes('afal'))return 'AFAL · LINARES';if(n.includes('afacon'))return 'AFACON · COLBÚN';if(n.includes('yerbas buenas'))return 'YERBAS BUENAS';return String(name||'').replace(/^asociaci[oó]n\s+/i,'').replace(/^soc\.\s*/i,'').trim().toUpperCase()}
 function polishAssociationSelector(){
   let st=document.querySelector('#associationSelectorPolish');
@@ -25,19 +27,24 @@ function polishAssociationSelector(){
   #pubAssociation,#ownerAssociation{appearance:auto!important;min-width:255px!important;min-height:46px!important;padding:10px 40px 10px 14px!important;border:2px solid #d2ad3a!important;border-radius:12px!important;background:linear-gradient(180deg,#061a11,#0d3422)!important;color:#ffd95a!important;font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif!important;font-size:.9rem!important;font-weight:950!important;letter-spacing:.045em!important;box-shadow:0 0 0 1px rgba(210,173,58,.16),0 7px 18px rgba(0,0,0,.28)!important;text-shadow:0 1px 0 rgba(0,0,0,.35)!important}
   #pubAssociation:focus,#ownerAssociation:focus{outline:3px solid rgba(255,217,90,.24)!important;outline-offset:2px!important;border-color:#ffe070!important}
   #pubAssociation option,#ownerAssociation option{background:#071b12!important;color:#ffffff!important;font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif!important;font-size:.94rem!important;font-weight:800!important}
+  #pubFixtures.only-crossings .series-row{display:none!important}
+  #pubFixtures.only-crossings .empty{display:none!important}
   @media(max-width:560px){#pubAssociation,#ownerAssociation{min-width:0!important;width:100%!important;font-size:.84rem!important}.top-choice{width:100%!important}}
   `;
   ['#pubAssociation','#ownerAssociation'].forEach(id=>{const sel=document.querySelector(id);if(!sel)return;[...sel.options].forEach(o=>{if(!o.dataset.originalLabel)o.dataset.originalLabel=o.textContent;const label=prettyAssociation(o.dataset.originalLabel);if(o.textContent!==label)o.textContent=label})});
 }
 function cleanFixtureDisplay(){
   const assoc=selectedAssociation();
+  const assocId=selectedAssociationId();
   const afacon=assoc.includes('afacon')||assoc.includes('afacom');
-  const linares=assoc==='asociacion linares'||assoc==='linares';
+  const linares=assocId===LINARES_ASSOCIATION_ID||assoc==='asociacion linares'||assoc==='linares';
   const zavala=assoc.includes('zavala');
   const onlyCrossings=afacon||linares;
+  const fixtureHost=document.querySelector('#pubFixtures');
+  fixtureHost?.classList.toggle('only-crossings',onlyCrossings);
   document.querySelectorAll('#pubFixtures .fixture').forEach(card=>{
-    card.querySelectorAll('.series-row').forEach(row=>{row.style.display=onlyCrossings?'none':''});
-    card.querySelectorAll('.empty').forEach(el=>{const t=norm(el.textContent);if((onlyCrossings||zavala)&&t==='sin series')el.style.display='none';else if(!onlyCrossings&&!zavala&&t==='sin series')el.style.display=''});
+    card.querySelectorAll('.series-row').forEach(row=>{row.style.setProperty('display',onlyCrossings?'none':'','important')});
+    card.querySelectorAll('.empty').forEach(el=>{const t=norm(el.textContent);if((onlyCrossings||zavala)&&t==='sin series')el.style.setProperty('display','none','important');else if(!onlyCrossings&&!zavala&&t==='sin series')el.style.removeProperty('display')});
   });
   const sub=document.querySelector('#pub-fixtures .section-title .muted');
   if(sub)sub.textContent=onlyCrossings?'Cruces programados entre clubes':'Enfrentamientos entre clubes y resultados por serie';
