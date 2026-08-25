@@ -8,6 +8,7 @@ const pretty=name=>{
   if(n.includes('afal')) return 'AFAL · LINARES';
   if(n.includes('afacon')) return 'AFACON · COLBÚN';
   if(n.includes('yerbas buenas')) return 'YERBAS BUENAS';
+  if(n.includes('villa alegre')) return 'ASOCIACIÓN VILLA ALEGRE';
   return String(name||'').replace(/^asociaci[oó]n\s+/i,'').replace(/^soc\.\s*/i,'').trim().toUpperCase();
 };
 function style(){
