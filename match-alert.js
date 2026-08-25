@@ -53,7 +53,42 @@ function removeFinishedMatchAlert(){document.querySelector('#achibuenoToday')?.r
 function cleanName(s){return norm(s)}
 async function ensureFenfurRows(){if(fenfurRows||fenfurLoading||typeof sb==='undefined')return;fenfurLoading=true;try{const {data,error}=await sb.from('fenfur_ties').select('id,category,home_team,away_team,first_leg_home_goals,first_leg_away_goals,second_leg_home_goals,second_leg_away_goals,status');if(!error)fenfurRows=data||[]}catch(_){}fenfurLoading=false}
 async function showFenfurScores(){const cards=[...document.querySelectorAll('#fenfurGrid .fenfur-tie')];if(!cards.length)return;await ensureFenfurRows();if(!fenfurRows)return;for(const card of cards){let box=card.querySelector('[data-fenfur-score]');if(card.querySelector('.fenfur-score-pill')){box?.remove();continue}const teams=[...card.querySelectorAll('.fenfur-team span')].map(x=>cleanName(x.childNodes[0]?.textContent||x.textContent));if(teams.length<2)continue;const row=fenfurRows.find(r=>cleanName(r.home_team)===teams[0]&&cleanName(r.away_team)===teams[1]);if(!row)continue;const parts=[];if(row.first_leg_home_goals!==null&&row.first_leg_home_goals!==undefined&&row.first_leg_away_goals!==null&&row.first_leg_away_goals!==undefined)parts.push(`IDA · ${row.home_team} ${row.first_leg_home_goals}-${row.first_leg_away_goals} ${row.away_team}`);if(row.second_leg_home_goals!==null&&row.second_leg_home_goals!==undefined&&row.second_leg_away_goals!==null&&row.second_leg_away_goals!==undefined)parts.push(`VUELTA · ${row.home_team} ${row.second_leg_home_goals}-${row.second_leg_away_goals} ${row.away_team}`);if(!parts.length){box?.remove();continue}if(!box){box=document.createElement('div');box.dataset.fenfurScore='1';box.style.cssText='margin-top:10px;padding:10px 11px;border-radius:10px;background:#5a1117;border:1px solid #d5ae42;color:#fff;font-weight:950;text-align:center';card.appendChild(box)}box.innerHTML=`🏁 ${parts.join('<br>')}`}}
-function run(){removeFinishedMatchAlert();polishAssociationSelector();cleanFixtureDisplay();ensureInstallButton();showFenfurScores()}
+function installFastAssociationSwitch(){
+  if(window.__linaresFastAssociationSwitch)return;
+  if(typeof window.switchPublicAssociation!=='function'||typeof window.loadBase!=='function'||typeof window.loadStandings!=='function'||typeof window.loadFixtures!=='function')return setTimeout(installFastAssociationSwitch,120);
+  window.__linaresFastAssociationSwitch=true;
+  window.switchPublicAssociation=async id=>{
+    if(!id)return;
+    const sel=document.querySelector('#pubAssociation');
+    localStorage.setItem('publicAssociation',id);
+    if(sel)sel.disabled=true;
+    try{
+      const ok=await window.loadBase(id);if(!ok)return;
+      document.querySelector('#suspended')?.classList.add('hidden');
+      document.querySelector('#publicView')?.classList.remove('hidden');
+      if(sel)sel.value=S.a;
+      window.fillSelectors();
+      await window.loadStandings(true);
+      const fixturesVisible=!document.querySelector('#pub-fixtures')?.classList.contains('hidden');
+      if(fixturesVisible)await window.loadFixtures();
+    }finally{if(sel)sel.disabled=false}
+  };
+  const fixturesTab=document.querySelector('[data-pub="fixtures"]');
+  if(fixturesTab&&!fixturesTab.dataset.lazyFixtures){fixturesTab.dataset.lazyFixtures='1';fixturesTab.onclick=async()=>{
+    document.querySelectorAll('[data-pub]').forEach(x=>x.classList.toggle('active',x===fixturesTab));
+    document.querySelector('#pub-tables')?.classList.add('hidden');
+    document.querySelector('#pub-fixtures')?.classList.remove('hidden');
+    const host=document.querySelector('#pubFixtures');if(host&&!S.fixtures.length)host.innerHTML='<div class="empty">Cargando fechas...</div>';
+    await window.loadFixtures();window.renderPublicFixtures();cleanFixtureDisplay();
+  }}
+  const tablesTab=document.querySelector('[data-pub="tables"]');
+  if(tablesTab&&!tablesTab.dataset.fastTables){tablesTab.dataset.fastTables='1';tablesTab.onclick=()=>{
+    document.querySelectorAll('[data-pub]').forEach(x=>x.classList.toggle('active',x===tablesTab));
+    document.querySelector('#pub-tables')?.classList.remove('hidden');
+    document.querySelector('#pub-fixtures')?.classList.add('hidden');
+  }}
+}
+function run(){removeFinishedMatchAlert();polishAssociationSelector();cleanFixtureDisplay();ensureInstallButton();showFenfurScores();installFastAssociationSwitch()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{setupPwa();run()});else{setupPwa();run()}
 let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;setTimeout(()=>{pending=false;run()},80)}).observe(document.body,{childList:true,subtree:true});
 })();
