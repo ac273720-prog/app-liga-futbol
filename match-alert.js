@@ -31,7 +31,13 @@ function showInstallHelp(message,action){
   external.classList.toggle('hidden',!action);external.onclick=action||null;
   modal.classList.remove('hidden')
 }
-function findInstallButtons(){return [...document.querySelectorAll('button,a')].filter(el=>/instalar\s*(la\s*)?app|descargar\s*(la\s*)?app/i.test((el.textContent||'').trim()))}
+function findInstallButtons(){
+  return [...document.querySelectorAll('button,a')].filter(el=>
+    el.id==='installAppBtn'||
+    el.dataset.pwaReady==='1'||
+    /instalar\s*(ahora|la\s*app|app)|preparando\s*instalaci[oó]n|descargar\s*(la\s*)?app/i.test((el.textContent||'').trim())
+  )
+}
 function showInstallStatus(message){
   let note=document.querySelector('#installStatusNote');
   const btn=findInstallButtons()[0];
