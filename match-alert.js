@@ -5,10 +5,10 @@ let fenfurLoading=false;
 const LINARES_ASSOCIATION_ID='f8057c00-36f9-4974-abca-5cc728300a74';
 
 function setupPwa(){
-  if(!document.querySelector('link[rel="manifest"]')){const link=document.createElement('link');link.rel='manifest';link.href='/manifest.webmanifest?v=4';document.head.appendChild(link)}
+  if(!document.querySelector('link[rel="manifest"]')){const link=document.createElement('link');link.rel='manifest';link.href='/manifest.webmanifest';document.head.appendChild(link)}
   if(!document.querySelector('meta[name="theme-color"]')){const meta=document.createElement('meta');meta.name='theme-color';meta.content='#075f33';document.head.appendChild(meta)}
   if(!document.querySelector('meta[name="apple-mobile-web-app-capable"]')){const meta=document.createElement('meta');meta.name='apple-mobile-web-app-capable';meta.content='yes';document.head.appendChild(meta)}
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('/service-worker.js?v=3',{scope:'/'}).catch(()=>{});ensureInstallButton()
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('/service-worker.js?v=4',{scope:'/'}).catch(()=>{});ensureInstallButton()
 }
 function isStandalone(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true}
 function isIos(){return /iphone|ipad|ipod/i.test(navigator.userAgent)}
