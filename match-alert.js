@@ -1,5 +1,6 @@
 (()=>{
 let installPrompt=null;
+let installRetryTimer=null;
 let fenfurRows=null;
 let fenfurLoading=false;
 const LINARES_ASSOCIATION_ID='f8057c00-36f9-4974-abca-5cc728300a74';
@@ -31,8 +32,53 @@ function showInstallHelp(message,action){
   modal.classList.remove('hidden')
 }
 function findInstallButtons(){return [...document.querySelectorAll('button,a')].filter(el=>/instalar\s*(la\s*)?app|descargar\s*(la\s*)?app/i.test((el.textContent||'').trim()))}
-function ensureInstallButton(){let buttons=findInstallButtons();if(buttons.length>1){buttons.slice(1).forEach(el=>el.remove());buttons=buttons.slice(0,1)}let btn=buttons[0]||null;if(!btn){const host=document.querySelector('#publicView .top-actions');if(!host)return;btn=document.createElement('button');btn.id='installAppBtn';btn.type='button';btn.textContent='📲 Instalar app';host.appendChild(btn)}btn.dataset.pwaReady='1';btn.style.cssText='display:inline-flex!important;align-items:center;justify-content:center;gap:7px;background:linear-gradient(135deg,#ffb300,#ff7a00)!important;color:#1d1600!important;border:2px solid #ffe082!important;border-radius:12px!important;padding:10px 16px!important;font-weight:950!important;font-size:14px!important;box-shadow:0 4px 12px rgba(255,122,0,.35)!important;cursor:pointer!important;';btn.onclick=async e=>{e.preventDefault();trackInstallEvent('install_click');if(isStandalone()){showInstallHelp('Linares Score ya está instalada en este dispositivo.');return}if(isInstagram()){if(isIos()){showInstallHelp('Instagram no permite instalar aplicaciones dentro de su navegador. Toca los tres puntos de arriba, elige “Abrir en Safari”; después toca Compartir y “Añadir a pantalla de inicio”.')}else{const cleanUrl=`${location.host}${location.pathname}${location.search}${location.hash}`;location.href=`intent://${cleanUrl}#Intent;scheme=https;package=com.android.chrome;end`}return}if(installPrompt){const p=installPrompt;installPrompt=null;await p.prompt();try{const choice=await p.userChoice;if(choice?.outcome==='accepted')trackInstallEvent('install_accepted')}catch(_){}return}if(isIos())showInstallHelp('En iPhone o iPad, toca Compartir y luego “Añadir a pantalla de inicio”.');else showInstallHelp('Abre el menú de tu navegador y elige “Instalar aplicación” o “Añadir a pantalla de inicio”.')}}
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;ensureInstallButton()});window.addEventListener('appinstalled',()=>{installPrompt=null;trackInstallEvent('install_confirmed');ensureInstallButton()});
+function showInstallStatus(message){
+  let note=document.querySelector('#installStatusNote');
+  const btn=findInstallButtons()[0];
+  if(!btn)return;
+  if(!note){note=document.createElement('small');note.id='installStatusNote';note.style.cssText='display:block;width:100%;color:#ffe082;font-weight:900;text-align:center;margin-top:4px';btn.parentElement?.appendChild(note)}
+  note.textContent=message;
+}
+function markInstallReady(){
+  clearTimeout(installRetryTimer);installRetryTimer=null;
+  const btn=findInstallButtons()[0];
+  if(btn){btn.disabled=false;btn.textContent='📲 Instalar ahora'}
+  showInstallStatus('Chrome ya habilitó la instalación. Toca “Instalar ahora”.');
+}
+function prepareChromeInstall(btn){
+  btn.disabled=true;btn.textContent='⏳ Preparando instalación…';
+  showInstallStatus('Chrome necesita unos segundos para habilitarla. Esta página se actualizará una vez.');
+  const wait=Math.max(1500,31000-performance.now());
+  clearTimeout(installRetryTimer);
+  installRetryTimer=setTimeout(()=>location.reload(),wait);
+}
+function ensureInstallButton(){
+  let buttons=findInstallButtons();
+  if(buttons.length>1){buttons.slice(1).forEach(el=>el.remove());buttons=buttons.slice(0,1)}
+  let btn=buttons[0]||null;
+  if(!btn){const host=document.querySelector('#publicView .top-actions');if(!host)return;btn=document.createElement('button');btn.id='installAppBtn';btn.type='button';btn.textContent='📲 Instalar app';host.appendChild(btn)}
+  btn.dataset.pwaReady='1';
+  btn.style.cssText='display:inline-flex!important;align-items:center;justify-content:center;gap:7px;background:linear-gradient(135deg,#ffb300,#ff7a00)!important;color:#1d1600!important;border:2px solid #ffe082!important;border-radius:12px!important;padding:10px 16px!important;font-weight:950!important;font-size:14px!important;box-shadow:0 4px 12px rgba(255,122,0,.35)!important;cursor:pointer!important;';
+  if(installPrompt)markInstallReady();
+  btn.onclick=async e=>{
+    e.preventDefault();trackInstallEvent('install_click');
+    if(isStandalone()){showInstallHelp('Linares Score ya está instalada en este dispositivo.');return}
+    if(isInstagram()){
+      if(isIos())showInstallHelp('Instagram no permite instalar aplicaciones dentro de su navegador. Toca los tres puntos de arriba, elige “Abrir en Safari”; después toca Compartir y “Añadir a pantalla de inicio”.');
+      else{const cleanUrl=`${location.host}${location.pathname}${location.search}${location.hash}`;location.href=`intent://${cleanUrl}#Intent;scheme=https;package=com.android.chrome;end`}
+      return
+    }
+    if(installPrompt){
+      const p=installPrompt;installPrompt=null;await p.prompt();
+      try{const choice=await p.userChoice;if(choice?.outcome==='accepted')trackInstallEvent('install_accepted')}catch(_){}
+      return
+    }
+    if(isIos())showInstallHelp('En iPhone o iPad, toca Compartir y luego “Añadir a pantalla de inicio”.');
+    else if(/android/i.test(navigator.userAgent)&&/chrome|crios/i.test(navigator.userAgent))prepareChromeInstall(btn);
+    else showInstallHelp('Abre el menú de tu navegador y elige “Instalar aplicación” o “Añadir a pantalla de inicio”.')
+  }
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;ensureInstallButton();markInstallReady()});window.addEventListener('appinstalled',()=>{installPrompt=null;clearTimeout(installRetryTimer);trackInstallEvent('install_confirmed');ensureInstallButton()});
 function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
 function selectedAssociation(){const sel=document.querySelector('#pubAssociation');return norm(sel?.options?.[sel.selectedIndex]?.textContent||'')}
 function selectedAssociationId(){return document.querySelector('#pubAssociation')?.value||''}
