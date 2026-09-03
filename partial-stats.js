@@ -20,6 +20,6 @@
     if('serviceWorker'in navigator)navigator.serviceWorker.register('/service-worker.js').catch(()=>{});
   }
 
-  const init=()=>{bind();notice();setTimeout(notice,400);setTimeout(notice,1200);openDirectAdmin();setTimeout(openDirectAdmin,350);setTimeout(openDirectAdmin,900);window.addEventListener('fenfur-hidden',notice);const sel=document.querySelector('#pubAssociation');if(sel)new MutationObserver(()=>{bind();setTimeout(notice,40)}).observe(sel,{childList:true,subtree:true});addScript('fenfur-cup.js?v=6','fenfur');addScript('fenfur-admin.js?v=3','fenfurAdmin');initPwa()};
+  const init=()=>{bind();notice();setTimeout(notice,400);setTimeout(notice,1200);openDirectAdmin();setTimeout(openDirectAdmin,350);setTimeout(openDirectAdmin,900);window.addEventListener('fenfur-hidden',notice);const sel=document.querySelector('#pubAssociation');if(sel)new MutationObserver(()=>{bind();setTimeout(notice,40)}).observe(sel,{childList:true,subtree:true});addScript('fenfur-cup.js?v=6','fenfur');addScript('fenfur-admin.js?v=3','fenfurAdmin');addScript('pwa-install.js?v=1','pwaInstall');initPwa()};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
