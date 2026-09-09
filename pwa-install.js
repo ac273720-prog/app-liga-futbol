@@ -1,5 +1,6 @@
 (()=>{
   let deferredPrompt=null;
+  let pendingClick=false;
   const ua=navigator.userAgent||'';
   const isIOS=/iphone|ipad|ipod/i.test(ua);
   const isInApp=/(instagram|fbav|fban|line|wv)/i.test(ua);
@@ -18,14 +19,24 @@
     if(isIOS){
       text.innerHTML='<b>En iPhone:</b><br>1. Abre esta página en Safari.<br>2. Toca <b>Compartir</b>.<br>3. Elige <b>Agregar a pantalla de inicio</b>.';
     }else if(isInApp){
-      text.innerHTML='<b>Estás dentro de Instagram/Facebook.</b><br><br>Abre el menú del navegador <b>⋮</b>, elige <b>Abrir en Chrome</b> o <b>Abrir en navegador</b>, y luego toca nuevamente <b>Instalar Linares Score</b>.';
+      text.innerHTML='<b>Estás dentro de Instagram/Facebook.</b><br><br>Abre el menú <b>⋮</b>, elige <b>Abrir en Chrome</b> o <b>Abrir en navegador</b>. En Chrome toca <b>Instalar Linares Score</b>.';
     }else{
-      text.innerHTML='Si no aparece la instalación automática, abre el menú del navegador <b>⋮</b> y toca <b>Instalar app</b> o <b>Agregar a pantalla de inicio</b>.';
+      text.innerHTML='<b>Chrome todavía no habilitó la ventana automática.</b><br><br>Toca el menú <b>⋮</b> de Chrome y elige <b>Instalar aplicación</b> o <b>Agregar a pantalla de inicio</b>.';
     }
     const close=document.createElement('button');close.type='button';close.textContent='Entendido';
     close.style.cssText='width:100%;margin-top:18px;border:0;border-radius:12px;padding:12px 14px;background:#0b9950;color:#fff;font-weight:900';
     close.onclick=removeHelp;
     card.append(title,text,close);box.appendChild(card);box.addEventListener('click',e=>{if(e.target===box)removeHelp()});document.body.appendChild(box);
+  }
+
+  async function launchPrompt(){
+    if(!deferredPrompt)return false;
+    const prompt=deferredPrompt;
+    deferredPrompt=null;
+    pendingClick=false;
+    try{prompt.prompt();await prompt.userChoice}catch{}
+    ensureButton();
+    return true;
   }
 
   function ensureButton(){
@@ -43,24 +54,43 @@
       const admin=actions.querySelector('#adminLoginBtn');
       if(admin)actions.insertBefore(btn,admin);else actions.appendChild(btn);
     }
-    btn.textContent='📲 Instalar Linares Score';
+    btn.textContent=deferredPrompt?'📲 Instalar ahora':'📲 Instalar Linares Score';
     btn.onclick=async()=>{
       if(standalone())return;
-      if(deferredPrompt){
-        const prompt=deferredPrompt;
-        deferredPrompt=null;
-        try{await prompt.prompt();await prompt.userChoice}catch{}
+      if(await launchPrompt())return;
+      if(isIOS||isInApp){showHelp();return}
+      pendingClick=true;
+      btn.textContent='Preparando instalación…';
+      setTimeout(async()=>{
+        if(!pendingClick)return;
+        if(await launchPrompt())return;
+        pendingClick=false;
         ensureButton();
-        return;
-      }
-      showHelp();
+        showHelp();
+      },1200);
     };
   }
 
-  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;ensureButton()});
-  window.addEventListener('appinstalled',()=>{deferredPrompt=null;removeHelp();document.querySelector('#installAppBtn')?.remove()});
-  function init(){
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('/service-worker.js',{scope:'/'}).catch(()=>{});
+  window.addEventListener('beforeinstallprompt',async e=>{
+    e.preventDefault();
+    deferredPrompt=e;
+    ensureButton();
+    if(pendingClick)await launchPrompt();
+  });
+  window.addEventListener('appinstalled',()=>{deferredPrompt=null;pendingClick=false;removeHelp();document.querySelector('#installAppBtn')?.remove()});
+
+  async function init(){
+    if('serviceWorker' in navigator){
+      try{
+        await navigator.serviceWorker.register('/service-worker.js',{scope:'/'});
+        await navigator.serviceWorker.ready;
+        if(!navigator.serviceWorker.controller&&!standalone()&&!isIOS&&!isInApp&&!sessionStorage.getItem('pwaControlledReload')){
+          sessionStorage.setItem('pwaControlledReload','1');
+          location.reload();
+          return;
+        }
+      }catch{}
+    }
     ensureButton();setTimeout(ensureButton,400);setTimeout(ensureButton,1200);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
