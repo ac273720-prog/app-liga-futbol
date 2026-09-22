@@ -65,7 +65,7 @@ function shortStatus(text){
   const out=[];
   if(t.includes('Campeón general'))out.push('🏅 Campeón');
   else if(t.includes('Campeón de serie'))out.push('🏅 Campeón');
-  if(t.includes('Copa Regional'))out.push('🏆 Copa');
+  if(t.includes('Líder de serie'))out.push('🏅 Líder');
   if(t.includes('Liguilla'))out.push('⚔️ Liguilla');
   if(t.includes('Descenso'))out.push('⬇️ Descenso');
   if(t.includes('Ascenso'))out.push('⬆️ Ascenso');

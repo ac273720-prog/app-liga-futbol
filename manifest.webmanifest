@@ -1,7 +1,7 @@
 {
   "name": "Linares Score Futbol Amateur",
   "short_name": "Linares Score",
-  "description": "Resultados, tablas, programación y Copa Regional del fútbol amateur de Linares y el Maule.",
+  "description": "Resultados, tablas y programación del fútbol amateur de Linares y el Maule.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

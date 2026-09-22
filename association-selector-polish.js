@@ -3,7 +3,6 @@ const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLo
 const pretty=name=>{
   const n=norm(name);
   if(n.includes('precordillera')) return 'PRECORDILLERA · LINARES';
-  if(n.includes('fenfur')) return '🏆 FENFUR · COPA REGIONAL';
   if(n.includes('victor zavala')) return 'VÍCTOR ZAVALA · LINARES';
   if(n.includes('afal')) return 'AFAL · LINARES';
   if(n.includes('afacon')) return 'AFACON · COLBÚN';
