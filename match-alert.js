@@ -82,10 +82,14 @@ function fallbackInstallHelp(){
   }
 }
 async function installApp(e){
-  e.preventDefault();if(installBusy)return;
+  if(installBusy){e.preventDefault();return}
   trackInstallEvent('install_click');
-  if(installedThisPage||isStandalone()){hideInstallButtons();return}
-  if(isInAppBrowser()&&isAndroid()){openInChrome();return}
+  if(installedThisPage||isStandalone()){e.preventDefault();hideInstallButtons();return}
+  if(isInAppBrowser()&&isAndroid()){
+    showInstallHelp('Si Chrome no se abre, toca el menú ⋯ de Instagram o Facebook y elige “Abrir en navegador”. También puedes copiar el enlace y pegarlo en Chrome.');
+    return;
+  }
+  e.preventDefault();
   if(isIos()){fallbackInstallHelp();return}
   if(!installPrompt){fallbackInstallHelp();return}
   const prompt=installPrompt;installPrompt=null;installBusy=true;ensureInstallButton();
@@ -100,12 +104,21 @@ function ensureInstallButton(){
   const buttons=findInstallButtons();buttons.slice(1).forEach(el=>el.remove());
   if(installedThisPage||isStandalone()){hideInstallButtons();return}
   let btn=buttons[0];
+  const external=isInAppBrowser()&&isAndroid(),tag=external?'A':'BUTTON';
+  if(btn&&btn.tagName!==tag){btn.remove();btn=null}
   if(!btn){
     const host=document.querySelector('#publicView .top-actions');if(!host)return;
-    btn=document.createElement('button');btn.id='installAppBtn';btn.type='button';btn.dataset.pwaReady='1';
-    btn.style.cssText='display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ffb300,#ff7a00);color:#1d1600;border:2px solid #ffe082;border-radius:12px;padding:12px 16px;font-weight:950;font-size:14px;cursor:pointer';
-    btn.onclick=installApp;host.appendChild(btn);
+    btn=document.createElement(tag.toLowerCase());btn.id='installAppBtn';btn.dataset.pwaReady='1';
+    btn.style.cssText='display:flex!important;align-items:center;justify-content:center;text-decoration:none;background:linear-gradient(135deg,#ffb300,#ff7a00)!important;color:#1d1600!important;border:2px solid #ffe082!important;border-radius:12px;padding:12px 16px;font-weight:950;font-size:14px;cursor:pointer';
+    host.appendChild(btn);
   }
+  btn.onclick=installApp;
+  if(external){
+    const url=chromeInstallUrl();
+    btn.href='intent://'+url.host+url.pathname+url.search+'#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(url.href)+';end;';
+    btn.setAttribute('role','button');
+  }else{btn.type='button'}
+
   const label=installBusy?'Instalar app…':'📲 Instalar app';
   if(btn.textContent!==label)btn.textContent=label;
   if(btn.disabled!==installBusy)btn.disabled=installBusy;
