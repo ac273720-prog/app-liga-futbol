@@ -106,7 +106,7 @@ function ensureInstallButton(){
     btn.style.cssText='display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ffb300,#ff7a00);color:#1d1600;border:2px solid #ffe082;border-radius:12px;padding:12px 16px;font-weight:950;font-size:14px;cursor:pointer';
     btn.onclick=installApp;host.appendChild(btn);
   }
-  const label=installBusy?'Confirma en tu navegador…':isInAppBrowser()&&isAndroid()?'📲 Abrir en Chrome e instalar':'📲 Instalar app';
+  const label=installBusy?'Instalar app…':'📲 Instalar app';
   if(btn.textContent!==label)btn.textContent=label;
   if(btn.disabled!==installBusy)btn.disabled=installBusy;
 }
