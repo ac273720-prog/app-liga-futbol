@@ -1,97 +1,117 @@
 (()=>{
-let installPrompt=null;
+let installPrompt=null,installBusy=false,installedThisPage=false;
 const LINARES_ASSOCIATION_ID='f8057c00-36f9-4974-abca-5cc728300a74';
-
 function setupPwa(){
   if(!document.querySelector('link[rel="manifest"]')){const link=document.createElement('link');link.rel='manifest';link.href='/manifest.webmanifest?v=7';document.head.appendChild(link)}
-  if(!document.querySelector('meta[name="theme-color"]')){const meta=document.createElement('meta');meta.name='theme-color';meta.content='#075f33';document.head.appendChild(meta)}
-  if(!document.querySelector('meta[name="apple-mobile-web-app-capable"]')){const meta=document.createElement('meta');meta.name='apple-mobile-web-app-capable';meta.content='yes';document.head.appendChild(meta)}
-  if(!document.querySelector('meta[name="apple-mobile-web-app-title"]')){const meta=document.createElement('meta');meta.name='apple-mobile-web-app-title';meta.content='Linares Score';document.head.appendChild(meta)}
-  if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js?v=6',{scope:'/'}).then(reg=>reg.update().catch(()=>{})).catch(()=>{})}
-  ensureInstallButton()
+  for(const [name,content] of [['theme-color','#075f33'],['apple-mobile-web-app-capable','yes'],['apple-mobile-web-app-title','Linares Score']]){
+    if(!document.querySelector('meta[name="'+name+'"]')){const meta=document.createElement('meta');meta.name=name;meta.content=content;document.head.appendChild(meta)}
+  }
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('/service-worker.js?v=6',{scope:'/'}).then(reg=>reg.update().catch(()=>{})).catch(()=>{});
+  const style=document.createElement('style');style.textContent='#installAppBtn{grid-column:1/-1;min-height:48px;width:100%}#installHelpModal ol{padding-left:24px;line-height:1.6}#installHelpModal li{margin:10px 0}#installHelpModal button:focus-visible{outline:3px solid #ffb300;outline-offset:3px}';document.head.appendChild(style);
+  ensureInstallButton();
 }
 function isStandalone(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true}
-function isIos(){return /iphone|ipad|ipod/i.test(navigator.userAgent)}
+function isIos(){return /iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)}
 function isAndroid(){return /android/i.test(navigator.userAgent)}
 function isInstagram(){return /instagram/i.test(navigator.userAgent)}
 function isFacebookInApp(){return /(fb_iab|fbav|fban)/i.test(navigator.userAgent)}
 function isInAppBrowser(){return isInstagram()||isFacebookInApp()}
-function installAnalyticsId(){let id=localStorage.getItem('linaresInstallId');if(!id){id=crypto.randomUUID?.()||'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&3|8);return v.toString(16)});localStorage.setItem('linaresInstallId',id)}return id}
-function trackInstallEvent(eventType){if(typeof sb==='undefined')return;const platform=isIos()?'ios':isAndroid()?'android':'other';const params=new URLSearchParams(location.search);const source=(params.get('utm_source')||(isInstagram()?'instagram':isFacebookInApp()?'facebook':'direct')).slice(0,32);sb.rpc('track_install_event',{p_install_id:installAnalyticsId(),p_event_type:eventType,p_platform:platform,p_source:source}).then(()=>{}).catch(()=>{})}
-function currentHttpsUrl(){return `https://${location.host}${location.pathname}${location.search}${location.hash}`}
-function openInChrome(){
-  const httpsUrl=currentHttpsUrl();
-  if(!isAndroid()){location.href=httpsUrl;return}
-  const clean=`${location.host}${location.pathname}${location.search}${location.hash}`;
-  const fallback=encodeURIComponent(httpsUrl);
-  location.href=`intent://${clean}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${fallback};end`
+function installAnalyticsId(){let id=localStorage.getItem('linaresInstallId');if(!id){id=crypto.randomUUID();localStorage.setItem('linaresInstallId',id)}return id}
+function trackInstallEvent(eventType){
+  try{
+    if(typeof sb==='undefined')return;
+    const platform=isIos()?'ios':isAndroid()?'android':'other',params=new URLSearchParams(location.search);
+    const source=(params.get('utm_source')||(isInstagram()?'instagram':isFacebookInApp()?'facebook':'direct')).slice(0,32);
+    Promise.resolve(sb.rpc('track_install_event',{p_install_id:installAnalyticsId(),p_event_type:eventType,p_platform:platform,p_source:source})).catch(()=>{});
+  }catch(_){}
 }
-function showInstallHelp(message,action,actionLabel='Abrir en Chrome'){
+function currentHttpsUrl(){
+  const url=new URL(location.href);url.protocol='https:';url.hash='';return url.href;
+}
+function chromeInstallUrl(){
+  const url=new URL(currentHttpsUrl());url.searchParams.set('install','1');
+  if(!url.searchParams.has('utm_source'))url.searchParams.set('utm_source',isInstagram()?'instagram':isFacebookInApp()?'facebook':'direct');
+  return url;
+}
+function openInChrome(){
+  const url=chromeInstallUrl();
+  showInstallHelp('Si Chrome no se abre, usa el menú ⋯ de Instagram o Facebook y elige “Abrir en navegador”. Después toca “Instalar app”.',openInChrome,'Abrir en Chrome');
+  location.href='intent://'+url.host+url.pathname+url.search+'#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(url.href)+';end;';
+}
+let installHelpOpener=null;
+function closeInstallHelp(){const modal=document.querySelector('#installHelpModal');modal?.classList.add('hidden');installHelpOpener?.focus()}
+function showInstallHelp(message,action,actionLabel='Abrir en Chrome',steps=[]){
   let modal=document.querySelector('#installHelpModal');
   if(!modal){
-    modal=document.createElement('div');modal.id='installHelpModal';modal.className='modal hidden';
-    modal.innerHTML='<div class="card modal-card" style="border-top:5px solid #d2ad3a;text-align:left"><div class="fixture-head"><div><small class="muted">LINARES SCORE</small><h2 style="margin:4px 0 0">Instalar aplicación</h2></div><button id="closeInstallHelp" class="ghost" type="button">✕</button></div><p id="installHelpText" style="font-size:1.05rem;line-height:1.5;margin:20px 0"></p><button id="externalInstallHelp" class="primary hidden" type="button" style="width:100%;margin-bottom:10px">Abrir en Chrome</button><button id="acceptInstallHelp" class="ghost" type="button" style="width:100%">Entendido</button></div>';
+    modal=document.createElement('div');modal.id='installHelpModal';modal.className='modal hidden';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-labelledby','installHelpTitle');
+    modal.innerHTML='<div class="card modal-card" style="text-align:left"><div class="fixture-head"><h2 id="installHelpTitle" style="margin:0">Instalar Linares Score</h2><button id="closeInstallHelp" class="ghost" aria-label="Cerrar" type="button">✕</button></div><p id="installHelpText" style="line-height:1.5"></p><ol id="installHelpSteps"></ol><button id="externalInstallHelp" class="primary hidden" type="button" style="width:100%;margin-bottom:10px"></button><button id="copyInstallLink" class="ghost" type="button" style="width:100%;margin-bottom:10px">Copiar enlace</button><p id="copyInstallStatus" role="status" style="overflow-wrap:anywhere"></p><button id="acceptInstallHelp" class="ghost" type="button" style="width:100%">Cerrar</button></div>';
     document.body.appendChild(modal);
-    const close=()=>modal.classList.add('hidden');
-    modal.querySelector('#closeInstallHelp').onclick=close;modal.querySelector('#acceptInstallHelp').onclick=close;
-    modal.addEventListener('click',e=>{if(e.target===modal)close()})
+    modal.querySelector('#closeInstallHelp').onclick=closeInstallHelp;modal.querySelector('#acceptInstallHelp').onclick=closeInstallHelp;
+    modal.addEventListener('click',e=>{if(e.target===modal)closeInstallHelp()});
+    modal.addEventListener('keydown',e=>{
+      if(e.key==='Escape'){e.preventDefault();closeInstallHelp()}
+      if(e.key==='Tab'){
+        const controls=[...modal.querySelectorAll('button')].filter(b=>!b.classList.contains('hidden')&&!b.disabled),first=controls[0],last=controls[controls.length-1];
+        if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+      }
+    });
+    modal.querySelector('#copyInstallLink').onclick=async()=>{
+      const status=modal.querySelector('#copyInstallStatus');
+      try{await navigator.clipboard.writeText(currentHttpsUrl());status.textContent='Enlace copiado. Pégalo en tu navegador.'}catch(_){status.textContent='Copia este enlace: '+currentHttpsUrl()}
+    };
   }
-  modal.querySelector('#installHelpText').textContent=message;
-  const external=modal.querySelector('#externalInstallHelp');
-  external.textContent=actionLabel;
-  external.classList.toggle('hidden',!action);external.onclick=action||null;
-  modal.classList.remove('hidden')
+  const wasHidden=modal.classList.contains('hidden');
+  if(wasHidden)installHelpOpener=document.activeElement;
+  const txt=modal.querySelector('#installHelpText');if(txt.textContent!==message)txt.textContent=message;
+  const list=modal.querySelector('#installHelpSteps');list.replaceChildren(...steps.map(text=>{const li=document.createElement('li');li.textContent=text;return li}));list.classList.toggle('hidden',!steps.length);
+  const external=modal.querySelector('#externalInstallHelp');external.textContent=actionLabel;external.classList.toggle('hidden',!action);external.onclick=action||null;
+  modal.querySelector('#copyInstallStatus').textContent='';modal.classList.remove('hidden');
+  if(wasHidden)modal.querySelector('#closeInstallHelp').focus();
 }
 function findInstallButtons(){
-  return [...document.querySelectorAll('button,a')].filter(el=>
-    el.id==='installAppBtn'||
-    el.dataset.pwaReady==='1'||
-    /instalar\s*(ahora|la\s*app|app)|preparando\s*instalaci[oó]n|descargar\s*(la\s*)?app/i.test((el.textContent||'').trim())
-  )
+  return [...document.querySelectorAll('button,a')].filter(el=>el.id==='installAppBtn'||el.dataset.pwaReady==='1');
 }
-function ensureInstallButton(){
-  let buttons=findInstallButtons();
-  if(buttons.length>1){buttons.slice(1).forEach(el=>el.remove());buttons=buttons.slice(0,1)}
-  if(isStandalone()){buttons.forEach(el=>el.remove());return}
-  let btn=buttons[0]||null;
-  if(!btn){const host=document.querySelector('#publicView .top-actions');if(!host)return;btn=document.createElement('button');btn.id='installAppBtn';btn.type='button';host.appendChild(btn)}
-  btn.dataset.pwaReady='1';
-  btn.style.cssText='display:inline-flex!important;align-items:center;justify-content:center;gap:7px;background:linear-gradient(135deg,#ffb300,#ff7a00)!important;color:#1d1600!important;border:2px solid #ffe082!important;border-radius:12px!important;padding:10px 16px!important;font-weight:950!important;font-size:14px!important;box-shadow:0 4px 12px rgba(255,122,0,.35)!important;cursor:pointer!important;';
-  btn.disabled=false;btn.textContent='📲 Instalar app';
-  btn.onclick=async e=>{
-    e.preventDefault();trackInstallEvent('install_click');
-    if(isStandalone()){btn.remove();return}
-    if(isInAppBrowser()){
-      if(isIos()){
-        const app=isInstagram()?'Instagram':'Facebook';
-        showInstallHelp(`${app} abre Linares Score dentro de su propio navegador y desde ahí no se puede instalar. Toca el menú ⋯ y elige “Abrir en navegador” o “Abrir en Safari”. Luego, en Safari, toca Compartir y “Añadir a pantalla de inicio”.`);
-      }else{
-        const app=isInstagram()?'Instagram':'Facebook';
-        showInstallHelp(`${app} abre Linares Score dentro de su propio navegador. Para instalarla correctamente, abre la página en Chrome y después toca “Instalar app”.`,openInChrome,'Abrir en Chrome');
-      }
-      return
-    }
-    if(installPrompt){
-      const p=installPrompt;installPrompt=null;
-      try{
-        await p.prompt();
-        const choice=await p.userChoice;
-        if(choice?.outcome==='accepted')trackInstallEvent('install_accepted');
-      }catch(_){}
-      ensureInstallButton();
-      return
-    }
-    if(isIos()){
-      showInstallHelp('En iPhone o iPad, abre esta página en Safari, toca el botón Compartir y luego “Añadir a pantalla de inicio”.');
-    }else if(isAndroid()){
-      showInstallHelp('Si no apareció la ventana automática, abre el menú ⋮ de Chrome y elige “Instalar aplicación” o “Añadir a pantalla de inicio”.');
-    }else{
-      showInstallHelp('Abre el menú de tu navegador y busca la opción “Instalar aplicación” o “Crear acceso directo”.');
-    }
+function hideInstallButtons(){findInstallButtons().forEach(el=>el.remove())}
+function fallbackInstallHelp(){
+  if(isIos()){
+    showInstallHelp(isInAppBrowser()?'Abre Linares Score en Safari para añadirla a tu pantalla de inicio.':'Añade Linares Score a tu pantalla de inicio.',null,'',isInAppBrowser()?['Toca ⋯ y elige “Abrir en navegador” o copia el enlace en Safari.','En Safari: Compartir → Añadir a pantalla de inicio → Añadir.']:['Toca Compartir en el navegador.','Elige “Añadir a pantalla de inicio” y confirma “Añadir”.']);
+  }else if(isAndroid()){
+    showInstallHelp('Instálala desde el menú de tu navegador.',null,'',['Toca el menú ⋮.','Elige “Instalar aplicación” o “Añadir a pantalla de inicio” y confirma.']);
+  }else{
+    showInstallHelp('Busca “Instalar Linares Score” en la barra de direcciones o en el menú de tu navegador.');
   }
 }
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;ensureInstallButton()});
-window.addEventListener('appinstalled',()=>{installPrompt=null;trackInstallEvent('install_confirmed');findInstallButtons().forEach(el=>el.remove())});
+async function installApp(e){
+  e.preventDefault();if(installBusy)return;
+  trackInstallEvent('install_click');
+  if(installedThisPage||isStandalone()){hideInstallButtons();return}
+  if(isInAppBrowser()&&isAndroid()){openInChrome();return}
+  if(isIos()){fallbackInstallHelp();return}
+  if(!installPrompt){fallbackInstallHelp();return}
+  const prompt=installPrompt;installPrompt=null;installBusy=true;ensureInstallButton();
+  try{
+    await prompt.prompt();
+    const choice=await prompt.userChoice;
+    if(choice?.outcome==='accepted'){trackInstallEvent('install_accepted');installedThisPage=true;closeInstallHelp()}
+  }catch(_){fallbackInstallHelp()}
+  finally{installBusy=false;ensureInstallButton()}
+}
+function ensureInstallButton(){
+  const buttons=findInstallButtons();buttons.slice(1).forEach(el=>el.remove());
+  if(installedThisPage||isStandalone()){hideInstallButtons();return}
+  let btn=buttons[0];
+  if(!btn){
+    const host=document.querySelector('#publicView .top-actions');if(!host)return;
+    btn=document.createElement('button');btn.id='installAppBtn';btn.type='button';btn.dataset.pwaReady='1';
+    btn.style.cssText='display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ffb300,#ff7a00);color:#1d1600;border:2px solid #ffe082;border-radius:12px;padding:12px 16px;font-weight:950;font-size:14px;cursor:pointer';
+    btn.onclick=installApp;host.appendChild(btn);
+  }
+  const label=installBusy?'Confirma en tu navegador…':isInAppBrowser()&&isAndroid()?'📲 Abrir en Chrome e instalar':'📲 Instalar app';
+  if(btn.textContent!==label)btn.textContent=label;
+  if(btn.disabled!==installBusy)btn.disabled=installBusy;
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;installedThisPage=false;ensureInstallButton();document.querySelector('#installHelpModal')?.classList.add('hidden')});
+window.addEventListener('appinstalled',()=>{installPrompt=null;installedThisPage=true;trackInstallEvent('install_confirmed');hideInstallButtons();closeInstallHelp()});
 try{window.matchMedia('(display-mode: standalone)').addEventListener('change',ensureInstallButton)}catch(_){}
 function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
 function selectedAssociation(){const sel=document.querySelector('#pubAssociation');return norm(sel?.options?.[sel.selectedIndex]?.textContent||'')}
