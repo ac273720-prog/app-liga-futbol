@@ -1,5 +1,8 @@
 (()=>{
-let installPrompt=null,installBusy=false,installedThisPage=false;
+let installPrompt=window.linaresInstallOffer||null,installBusy=false,installedThisPage=false;
+window.linaresInstallOffer=null;
+if(window.linaresCaptureInstall)window.removeEventListener('beforeinstallprompt',window.linaresCaptureInstall);
+let installWaitTimer=null,waitingForInstall=false;
 const LINARES_ASSOCIATION_ID='f8057c00-36f9-4974-abca-5cc728300a74';
 function setupPwa(){
   if(!document.querySelector('link[rel="manifest"]')){const link=document.createElement('link');link.rel='manifest';link.href='/manifest.webmanifest?v=7';document.head.appendChild(link)}
@@ -39,7 +42,7 @@ function openInChrome(){
   location.href='intent://'+url.host+url.pathname+url.search+'#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(url.href)+';end;';
 }
 let installHelpOpener=null;
-function closeInstallHelp(){const modal=document.querySelector('#installHelpModal');modal?.classList.add('hidden');installHelpOpener?.focus()}
+function closeInstallHelp(){clearTimeout(installWaitTimer);waitingForInstall=false;const modal=document.querySelector('#installHelpModal');modal?.classList.add('hidden');installHelpOpener?.focus()}
 function showInstallHelp(message,action,actionLabel='Abrir en Chrome',steps=[]){
   let modal=document.querySelector('#installHelpModal');
   if(!modal){
@@ -64,7 +67,7 @@ function showInstallHelp(message,action,actionLabel='Abrir en Chrome',steps=[]){
   if(wasHidden)installHelpOpener=document.activeElement;
   const txt=modal.querySelector('#installHelpText');if(txt.textContent!==message)txt.textContent=message;
   const list=modal.querySelector('#installHelpSteps');list.replaceChildren(...steps.map(text=>{const li=document.createElement('li');li.textContent=text;return li}));list.classList.toggle('hidden',!steps.length);
-  const external=modal.querySelector('#externalInstallHelp');external.textContent=actionLabel;external.classList.toggle('hidden',!action);external.onclick=action||null;
+  const external=modal.querySelector('#externalInstallHelp');external.textContent=actionLabel;external.classList.toggle('hidden',!action);external.onclick=action||null;external.disabled=false;
   modal.querySelector('#copyInstallStatus').textContent='';modal.classList.remove('hidden');
   if(wasHidden)modal.querySelector('#closeInstallHelp').focus();
 }
@@ -81,6 +84,23 @@ function fallbackInstallHelp(){
     showInstallHelp('Busca “Instalar Linares Score” en la barra de direcciones o en el menú de tu navegador.');
   }
 }
+function waitForInstallOffer(){
+  clearTimeout(installWaitTimer);waitingForInstall=true;
+  showInstallHelp('Chrome está preparando la instalación. Espera unos segundos en esta página.',installApp,'Instalar app');
+  const action=document.querySelector('#externalInstallHelp');if(action)action.disabled=true;
+  installWaitTimer=setTimeout(()=>{
+    waitingForInstall=false;
+    fallbackInstallHelp();
+  },35000);
+}
+function receiveInstallOffer(e){
+  e.preventDefault();installPrompt=e;window.linaresInstallOffer=null;installedThisPage=false;
+  clearTimeout(installWaitTimer);ensureInstallButton();
+  if(waitingForInstall){
+    waitingForInstall=false;
+    showInstallHelp('Todo listo. Toca “Instalar app” para confirmar la instalación en Chrome.',installApp,'Instalar app');
+  }
+}
 async function installApp(e){
   if(installBusy){e.preventDefault();return}
   trackInstallEvent('install_click');
@@ -91,8 +111,9 @@ async function installApp(e){
   }
   e.preventDefault();
   if(isIos()){fallbackInstallHelp();return}
-  if(!installPrompt){fallbackInstallHelp();return}
-  const prompt=installPrompt;installPrompt=null;installBusy=true;ensureInstallButton();
+  if(!installPrompt){if(/chrome|chromium|edg/i.test(navigator.userAgent))waitForInstallOffer();else fallbackInstallHelp();return}
+  closeInstallHelp();
+  const prompt=installPrompt;installPrompt=null;window.linaresInstallOffer=null;installBusy=true;ensureInstallButton();
   try{
     await prompt.prompt();
     const choice=await prompt.userChoice;
@@ -123,7 +144,7 @@ function ensureInstallButton(){
   if(btn.textContent!==label)btn.textContent=label;
   if(btn.disabled!==installBusy)btn.disabled=installBusy;
 }
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;installedThisPage=false;ensureInstallButton();document.querySelector('#installHelpModal')?.classList.add('hidden')});
+window.addEventListener('beforeinstallprompt',receiveInstallOffer);
 window.addEventListener('appinstalled',()=>{installPrompt=null;installedThisPage=true;trackInstallEvent('install_confirmed');hideInstallButtons();closeInstallHelp()});
 try{window.matchMedia('(display-mode: standalone)').addEventListener('change',ensureInstallButton)}catch(_){}
 function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
